@@ -11,7 +11,7 @@ class Translator:
         self.model = your_model
 
     def translate(self, text: str) -> str:
-        prompt = f"请将以下内容从{self.source}翻译为{self.target}，你的输出内容将直接作为译文，所以不要回复任何无关内容：\n\n{text}。\n/nothink"
+        prompt = f"将给出内容从{self.source}翻译为{self.target}，翻译过程中必须保留我的标记符“<ng>”，禁止自主添加、减少和移动标记符“<ng>”，你的输出内容将直接作为译文，所以不要回复任何无关内容。原文：{text}/nothink"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
