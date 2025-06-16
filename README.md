@@ -24,6 +24,10 @@ This project utilizes optical character recognition (OCR) and translation to tra
 
 -   Supported languages for OCR can be seen [here](https://www.jaided.ai/easyocr/)
 -   Supported languages for LLM can be obtained using the following code:
+```
+translator = Translator(source="英文", target="中文", apikey=yourapi_key, api_base=yourapi_url)
+print(translator.translate(text))
+```
 -   Adjustments to text languages, recognition thresholds, translation services, or image processing parameters can be made within the script.
 
 ## Acknowledgments
