@@ -33,5 +33,4 @@ print(translator.translate(text))
 ## Acknowledgments
 
 -   [EasyOCR](https://github.com/JaidedAI/EasyOCR) - For OCR processing.
--   [Google Translator](https://pypi.org/project/deep-translator/) - For text translation.
 -   [Pillow (PIL Fork)](https://python-pillow.org/) - For image manipulation.
