@@ -7,7 +7,7 @@ class Translator:
         self.source = source
         self.target = target
         self.api_key = api_key
-        self.api_base = api_base.rstrip("/")  # 防止末尾斜杠造成拼接错误
+        self.api_base = api_base.rstrip("/")  # Prevent concatenation errors caused by trailing slashes
         self.model = model
 
     def translate(self, text: str) -> str:
@@ -35,7 +35,7 @@ class Translator:
             result = response.json()
             return result["choices"][0]["message"]["content"].strip()
         else:
-            raise Exception(f"请求失败啦 (╥﹏╥)，状态码: {response.status_code}, 响应: {response.text}")
+            raise Exception(f"The request failed (╥﹏╥)，Status code: {response.status_code}, response: {response.text}")
 
 def perform_ocr(image_path, reader):
     # Perform OCR on the image
@@ -60,7 +60,7 @@ def get_font(image, text, width, height, font_path="font/font.ttf"):
         try:
             new_font = ImageFont.truetype(font_path, size=size)
         except OSError:
-            raise ValueError(f"字体加载失败，请检查路径是否正确：{font_path}")
+            raise ValueError(f"Font load error,please check font_path：{font_path}")
 
         new_box = draw.textbbox((0, 0), text, font=new_font)
         new_w = new_box[2] - new_box[0]
@@ -188,7 +188,7 @@ def replace_text_with_translation(image_path, translated_texts, text_boxes):
 reader = easyocr.Reader(["en"], model_storage_directory = 'model')
 
 # Initialize the Translator
-translator = Translator(source="英文", target="中文", apikey=yourapi_key, api_base=yourapi_url, model=your_model)
+translator = Translator(source="英文", target="中文", api_key=yourapi_key, api_base=yourapi_url, model=your_model)
 
 # Define input and output location
 input_folder = "input"
