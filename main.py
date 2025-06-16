@@ -1,5 +1,5 @@
 from PIL import Image, ImageDraw, ImageFont
-from deep_translator import GoogleTranslator
+from LLM_translator import Translator
 import os, easyocr
 
 
@@ -13,51 +13,43 @@ def perform_ocr(image_path, reader):
     return extracted_text_boxes
 
 
-def get_font(image, text, width, height):
-
-    # Default values at start
-    font_size = None  # For font size
-    font = None  # For object truetype with correct font size
-    box = None  # For version 8.0.0
+def get_font(image, text, width, height, font_path="font/font.ttf"):
+    font_size = None
+    font = None
+    box = None
     x = 0
     y = 0
 
-    draw = ImageDraw.Draw(image)  # Create a draw object
+    draw = ImageDraw.Draw(image)
 
-    # Test for different font sizes
     for size in range(1, 500):
+        try:
+            new_font = ImageFont.truetype(font_path, size=size)
+        except OSError:
+            raise ValueError(f"字体加载失败，请检查路径是否正确：{font_path}")
 
-        # Create new font
-        new_font = ImageFont.load_default(size=font_size)
-
-        # Calculate bbox for version 8.0.0
         new_box = draw.textbbox((0, 0), text, font=new_font)
+        new_w = new_box[2] - new_box[0]
+        new_h = new_box[3] - new_box[1]
 
-        # Calculate width and height
-        new_w = new_box[2] - new_box[0]  # Bottom - Top
-        new_h = new_box[3] - new_box[1]  # Right - Left
-
-        # If too big then exit with previous values
         if new_w > width or new_h > height:
             break
 
-        # Set new current values as current values
         font_size = size
         font = new_font
         box = new_box
         w = new_w
         h = new_h
-
-        # Calculate position (minus margins in box)
-        x = (width - w) // 2 - box[0]  # Minus left margin
-        y = (height - h) // 2 - box[1]  # Minus top margin
+        x = (width - w) // 2 - box[0]
+        y = (height - h) // 2 - box[1]
 
     return font, x, y
 
 
 def add_discoloration(color, strength):
     # Adjust RGB values to add discoloration
-    r, g, b = color
+    # Only take the first three channels: R, G, B, ignore A (transparency)
+    r, g, b = color[:3]
     r = max(0, min(255, r + strength))  # Ensure RGB values are within valid range
     g = max(0, min(255, g + strength))
     b = max(0, min(255, b + strength))
@@ -159,10 +151,10 @@ def replace_text_with_translation(image_path, translated_texts, text_boxes):
 
 
 # Initialize the OCR reader
-reader = easyocr.Reader(["ch_sim", "en"], model_storage_directory = 'model')
+reader = easyocr.Reader(["en"], model_storage_directory = 'model')
 
 # Initialize the Translator
-translator = GoogleTranslator(source="zh-CN", target="en")
+translator = Translator(source="英文", target="中文", apikey=yourapi_key, api_base=yourapi_url)
 
 # Define input and output location
 input_folder = "input"
