@@ -1,36 +1,41 @@
-# Image Translator
+### [中文][zh] | [English][en]
 
-This project utilizes optical character recognition (OCR) and translation to translate text within images from one language to another. It performs the following steps:
+# 大语言模型图片翻译器
 
-1. **OCR Processing:** The project extracts text and its bounding boxes from input images using the EasyOCR library.
-2. **Translation:** It translates the extracted text using the LLM API.
-3. **Text Replacement:** The translated text is then overlaid onto the image, replacing the original text while maintaining its position and style.
-4. **Output:** Finally, the modified image with translated text is saved to an output folder.
 
-## Setup
+本项目结合光学字符识别（OCR）与翻译技术，实现图片内文本的跨语言翻译。主要流程如下：
 
-### Installation
+1. **OCR处理**：通过EasyOCR库从输入图片中提取文本及其定位框
+2. **文本翻译**：调用LLM API对提取的文本进行翻译
+3. **文本替换**：将翻译后的文本按原位置和样式覆盖到图片上
+4. **输出结果**：最终生成带翻译文本的图片并保存至输出文件夹
 
-1. Clone this repository to your local machine.
-2. Install the required Python dependencies using `pip install pipenv && pipenv install`.
+## 环境配置
 
-## Usage
+#### 安装步骤
 
-1. Place your input images in the `input` folder.
-2. Run the script `main.py`.
-3. Translated images will be saved in the `output` folder.
+1. 将代码仓库克隆到本地
+2. 执行`pip install easyocr PIL`安装Python依赖包
 
-## Notes
+## 使用说明
 
--   Supported languages for OCR can be seen [here](https://www.jaided.ai/easyocr/)
--   Supported languages for LLM can be obtained using the following code:
-```
-translator = Translator(source="英文", target="中文", apikey=yourapi_key, api_base=yourapi_url)
-print(translator.translate(text))
-```
--   Adjustments to text languages, recognition thresholds, translation services, or image processing parameters can be made within the script.
+1. 将待翻译图片放入`input`文件夹
+2. 将`main.py`脚本这一行`translator = Translator(source="英文", target="中文", apikey=yourapi_key, api_base=yourapi_url)`中的openai兼容api的api_key和api_url填写好。
+3. 运行`main.py`脚本
+4. 翻译结果将保存至`output`文件夹
 
-## Acknowledgments
+## 注意事项
 
--   [EasyOCR](https://github.com/JaidedAI/EasyOCR) - For OCR processing.
--   [Pillow (PIL Fork)](https://python-pillow.org/) - For image manipulation.
+- 支持的OCR语言列表参见[此链接](https://www.jaided.ai/easyocr/)
+- 可在脚本中调整文本语种、识别阈值、翻译服务或图像处理参数
+- 为了使用大语言模型联系全文翻译，文字无法一一对应，可能导致文字被压缩的很小。目前我无法解决。
+
+## 致谢
+
+- [EasyOCR](https://github.com/JaidedAI/EasyOCR) - OCR处理核心库
+- [Pillow (PIL Fork)](https://python-pillow.org/) - 图像处理工具库
+- [原仓库python-image-translator](https://github.com/boysugi20/python-image-translator) 和 [原作者boysugi20](https://github.com/boysugi20)
+
+[en]: https://github.com/jedzqer/LLM-image-translator/blob/master/README_en.md "This README is translated by AI"
+
+[zh]: https://github.com/jedzqer/LLM-image-translator/blob/master/README.md
