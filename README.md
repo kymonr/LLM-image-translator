@@ -20,7 +20,7 @@
 ## 使用说明
 
 1. 将待翻译图片放入`input`文件夹
-2. 将`main.py`脚本这一行`translator = Translator(source="英文", target="中文", apikey=yourapi_key, api_base=yourapi_url)`中的openai兼容api的api_key和api_url填写好。
+2. 将`main.py`脚本这一行`translator = Translator(source="英文", target="中文", apikey=yourapi_key, api_base=yourapi_url, model=your_model)`中的openai兼容api的api_key和api_url填写好。
 3. 运行`main.py`脚本
 4. 翻译结果将保存至`output`文件夹
 
