@@ -21,8 +21,9 @@ This project combines Optical Character Recognition (OCR) with translation techn
 
 1. Place the images to be translated in the `input` folder.
 2. Fill in the OpenAI-compatible API's `api_key` and `api_url` in the line `translator = Translator(source="English", target="Chinese", apikey=yourapi_key, api_base=yourapi_url, model=your_model)` in the `main.py` script.
-3. Run the `main.py` script.
-4. The translated results will be saved to the `output` folder.
+3. Make sure your font file path is: font/font.ttf
+4. Run the `main.py` script.
+5. The translated results will be saved to the `output` folder.
 
 ## Notes
 
