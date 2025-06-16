@@ -1,7 +1,41 @@
 from PIL import Image, ImageDraw, ImageFont
-from LLM_translator import Translator
 import os, easyocr
+import requests
 
+class Translator:
+    def __init__(self, source: str, target: str, api_key: str, api_base: str):
+        self.source = source
+        self.target = target
+        self.api_key = api_key
+        self.api_base = api_base.rstrip("/")  # 防止末尾斜杠造成拼接错误
+        self.model = your_model
+
+    def translate(self, text: str) -> str:
+        prompt = f"请将以下内容从{self.source}翻译为{self.target}，你的输出内容将直接作为译文，所以不要回复任何无关内容：\n\n{text}。\n/nothink"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        data = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "你是一个专业的翻译助手。"},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.3
+        }
+
+        response = requests.post(
+            f"{self.api_base}/v1/chat/completions",
+            headers=headers,
+            json=data
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            return result["choices"][0]["message"]["content"].strip()
+        else:
+            raise Exception(f"请求失败啦 (╥﹏╥)，状态码: {response.status_code}, 响应: {response.text}")
 
 def perform_ocr(image_path, reader):
     # Perform OCR on the image
