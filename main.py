@@ -208,8 +208,28 @@ for filename in image_files:
 
     # Translate texts
     translated_texts = []
+    all_original_texts = []
+    all_translated_text = ""
+
     for text_box, text in extracted_text_boxes:
-        translated_texts.append(translator.translate(text))
+        all_original_texts.append(text)
+        
+    # Merge all original texts, connect them with <ng>
+    all_translated_input = '<ng>'.join(all_original_texts)
+
+    # perform translation
+    all_translated_text = translator.translate(all_translated_input)
+
+    # split the translated results according to the number of original texts
+    translated_segments = all_translated_text.split('<ng>', len(all_original_texts)-1)
+
+    # If the number of paragraphs in the translation result is less than the original text, merge the remaining parts into the last paragraph.
+    if len(translated_segments) < len(all_original_texts):
+        remaining_text = '<ng>'.join(translated_segments[len(all_original_texts)-1:])
+        remaining_text = remaining_text.replace("<ng>", "")
+        translated_segments = translated_segments[:len(all_original_texts)-1] + [remaining_text]
+
+    translated_texts = translated_segments
 
     # Replace text with translated text
     image = replace_text_with_translation(image_path, translated_texts, extracted_text_boxes)
