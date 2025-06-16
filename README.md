@@ -21,7 +21,7 @@
 
 1. 将待翻译图片放入`input`文件夹
 2. 将`main.py`脚本这一行`translator = Translator(source="英文", target="中文", apikey=yourapi_key, api_base=yourapi_url, model=your_model)`中的openai兼容api的api_key和api_url填写好。
-3. 将你的字体文件放入font/font.ttf
+3. 确保你的字体文件路径为：font/font.ttf
 4. 运行`main.py`脚本
 5. 翻译结果将保存至`output`文件夹
 
