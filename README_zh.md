@@ -1,4 +1,4 @@
-### [中文](https://github.com/jedzqer/LLM-image-translator/blob/master/README_zh.md) | [英文](https://github.com/jedzqer/LLM-image-translator/blob/master/README.md)
+### [中文][zh] | [English][en]
 
 # 大语言模型图片翻译器
 
@@ -35,3 +35,7 @@
 - [EasyOCR](https://github.com/JaidedAI/EasyOCR) - OCR处理核心库
 - [Pillow (PIL Fork)](https://python-pillow.org/) - 图像处理工具库
 - [原仓库python-image-translator](https://github.com/boysugi20/python-image-translator) 和 [原作者boysugi20](https://github.com/boysugi20)
+
+[en]: https://github.com/jedzqer/LLM-image-translator/blob/master/README_en.md "This README is translated by AI"
+
+[zh]: https://github.com/jedzqer/LLM-image-translator/blob/master/README.md
