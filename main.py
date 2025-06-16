@@ -1,4 +1,4 @@
-from PIL import Image, ImageDraw, ImageFont
++from PIL import Image, ImageDraw, ImageFont
 import os, easyocr
 import requests
 
@@ -188,7 +188,13 @@ def replace_text_with_translation(image_path, translated_texts, text_boxes):
 reader = easyocr.Reader(["en"], model_storage_directory = 'model')
 
 # Initialize the Translator
-translator = Translator(source="英文", target="中文", api_key=yourapi_key, api_base=yourapi_url, model=your_model)
+translator = Translator(
+    source="English", 
+    target="中文", 
+    api_key=yourapi_key, 
+    api_base=yourapi_url, 
+    model=your_model
+    )
 
 # Define input and output location
 input_folder = "input"
