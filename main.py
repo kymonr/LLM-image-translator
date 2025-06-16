@@ -3,12 +3,12 @@ import os, easyocr
 import requests
 
 class Translator:
-    def __init__(self, source: str, target: str, api_key: str, api_base: str):
+    def __init__(self, source: str, target: str, api_key: str, api_base: str, model: str):
         self.source = source
         self.target = target
         self.api_key = api_key
         self.api_base = api_base.rstrip("/")  # 防止末尾斜杠造成拼接错误
-        self.model = your_model
+        self.model = model
 
     def translate(self, text: str) -> str:
         prompt = f"将给出内容从{self.source}翻译为{self.target}，翻译过程中必须保留我的标记符“<ng>”，禁止自主添加、减少和移动标记符“<ng>”，你的输出内容将直接作为译文，所以不要回复任何无关内容。原文：{text}/nothink"
@@ -188,7 +188,7 @@ def replace_text_with_translation(image_path, translated_texts, text_boxes):
 reader = easyocr.Reader(["en"], model_storage_directory = 'model')
 
 # Initialize the Translator
-translator = Translator(source="英文", target="中文", apikey=yourapi_key, api_base=yourapi_url)
+translator = Translator(source="英文", target="中文", apikey=yourapi_key, api_base=yourapi_url, model=your_model)
 
 # Define input and output location
 input_folder = "input"
