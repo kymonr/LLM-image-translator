@@ -1,6 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
 import os, easyocr
 import requests
+import json
 
 
 class Translator:
@@ -11,8 +12,22 @@ class Translator:
         self.api_base = api_base.rstrip("/")  # Prevent concatenation errors caused by trailing slashes
         self.model = model
 
-    def translate(self, text: str) -> str:
-        prompt = f"将给出内容从{self.source}翻译为{self.target}，翻译过程中必须保留我的标记符“<ng>”，禁止自主添加、减少和移动标记符“<ng>”，你的输出内容将直接作为译文，所以不要回复任何无关内容。原文：{text}/nothink"
+    def translate(self, data: list) -> list:
+        """Process structured input and output"""
+        input_json = json.dumps(data, ensure_ascii=False)
+        prompt = f"""你是一个翻译助手，需要将输入的JSON格式数据中的每个文本字段从{self.source}翻译成{self.target}，并保持相同的结构。输入格式为列表，每个元素包含"text"和"text_box"。输出必须严格遵循输入结构，仅翻译"text"字段的值。例如：
+
+输入：
+[{{"text": "Hello", "text_box": [[1,2], [3,4]]}}, {{"text": "World", "text_box": [[5,6]]}}]
+
+输出：
+[{{"text": "你好", "text_box": [[1,2], [3,4]]}}, {{"text": "世界", "text_box": [[5,6]]}}]
+
+请严格按照上述格式输出翻译结果，不要添加任何额外内容。尽量翻译全部可翻译内容。
+这是由OCR输出的结果，存在随意拆分，你可以将一些可能为同一句的项合并在一起，新的项的text_box的每个值应为原来几个项目中最大的那几个。
+
+原文：{input_json}"""
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -34,21 +49,21 @@ class Translator:
 
         if response.status_code == 200:
             result = response.json()
-            return result["choices"][0]["message"]["content"].strip()
+            translated_content = result["choices"][0]["message"]["content"].strip()
+            try:
+                return json.loads(translated_content)
+            except json.JSONDecodeError:
+                raise Exception("Translation result format error")
         else:
-            raise Exception(f"The request failed (╥﹏╥)，Status code: {response.status_code}, response: {response.text}")
+            raise Exception(f"Request failed: {response.status_code}")
 
 def perform_ocr(image_path, reader):
-    # Perform OCR recognition on the image
-    result = reader.readtext(image_path, width_ths = 0.8,  decoder = 'wordbeamsearch')
-
-    # Extract text and bounding boxes from OCR results
-    extracted_text_boxes = [(entry[0], entry[1]) for entry in result if entry[2] > 0.4]
-
-    return extracted_text_boxes
-
+    """Perform OCR on the input image and return text with confidence > 0.4"""
+    result = reader.readtext(image_path, width_ths=0.8, decoder='wordbeamsearch')
+    return [(entry[0], entry[1]) for entry in result if entry[2] > 0.4]
 
 def get_font(image, text, width, height, font_path="font/font.ttf"):
+    """Determine the largest font size that fits within the given dimensions"""
     font_size = None
     font = None
     box = None
@@ -61,7 +76,7 @@ def get_font(image, text, width, height, font_path="font/font.ttf"):
         try:
             new_font = ImageFont.truetype(font_path, size=size)
         except OSError:
-            raise ValueError(f"Failed to load font, please check the path: {font_path}")
+            raise ValueError(f"Failed to load font, please check path: {font_path}")
 
         new_box = draw.textbbox((0, 0), text, font=new_font)
         new_w = new_box[2] - new_box[0]
@@ -82,7 +97,7 @@ def get_font(image, text, width, height, font_path="font/font.ttf"):
 
 
 def add_discoloration(color, strength):
-    # Adjust RGB values to add a discoloration effect
+    """Adjust RGB values to create a discoloration effect"""
     r, g, b = color
     r = max(0, min(255, r + strength))  # Ensure RGB values are within valid range
     g = max(0, min(255, g + strength))
@@ -93,12 +108,12 @@ def add_discoloration(color, strength):
 
     return (r, g, b)
 
-
 def get_background_color(image, x_min, y_min, x_max, y_max):
+    """Determine the background color around the text region"""
     # Define margin for edge region
     margin = 10
 
-    # Crop a small region around the edges of the bounding box
+    # Crop a small region around the bounding box edges
     edge_region = image.crop(
         (
             max(x_min - margin, 0),
@@ -114,10 +129,9 @@ def get_background_color(image, x_min, y_min, x_max, y_max):
     # Find the most common color in the cropped region
     edge_colors = edge_region.getcolors(edge_region.size[0] * edge_region.size[1])
     
-    # When the region has uniform color, getcolors might return None
+    # getcolors might return None if the region is monochromatic
     if not edge_colors:
-        # If no colors are retrieved (e.g., region is completely transparent or special case), return a default color
-        # Here we take the color of the top-left pixel of the region as a fallback
+        # Return the color of the top-left pixel as a fallback
         return add_discoloration(edge_region.getpixel((0, 0)), 40)
 
     background_color = max(edge_colors, key=lambda x: x[0])[1]
@@ -129,6 +143,7 @@ def get_background_color(image, x_min, y_min, x_max, y_max):
 
 
 def get_text_fill_color(background_color):
+    """Determine text color (black/white) based on background luminance"""
     # Calculate luminance of the background color
     luminance = (
         0.299 * background_color[0]
@@ -136,122 +151,49 @@ def get_text_fill_color(background_color):
         + 0.114 * background_color[2]
     ) / 255
 
-    # Determine text color based on background luminance
+    # Choose text color based on background luminance
     if luminance > 0.5:
         return "black"  # Use black text for light backgrounds
     else:
         return "white"  # Use white text for dark backgrounds
 
-
-def replace_text_with_translation(image_path, translated_texts, text_boxes):
-    # Open the image
-    image = Image.open(image_path)
+def replace_text_with_translation(image, translated_data):
+    """Replace original text with translated text on the image"""
     draw = ImageDraw.Draw(image)
-
-    # Load font
-    font = ImageFont.load_default()
-
-    # Replace each text box with translated text
-    for text_box, translated in zip(text_boxes, translated_texts):
-
-        if translated is None:
+    
+    for item in translated_data:
+        translated_text = item.get('text')
+        if not translated_text:
+            continue
+            
+        text_box = item.get('text_box')
+        if not text_box:
             continue
 
-        # Set initial values
-        x_min, y_min = text_box[0][0][0], text_box[0][0][1]
-        x_max, y_max = text_box[0][0][0], text_box[0][0][1]
+        # Calculate bounding box coordinates
+        x_coords = [coord[0] for coord in text_box]
+        y_coords = [coord[1] for coord in text_box]
+        x_min, y_min = min(x_coords), min(y_coords)
+        x_max, y_max = max(x_coords), max(y_coords)
 
-        for coordinate in text_box[0]:
-
-            x, y = coordinate
-
-            if x < x_min:
-                x_min = x
-            elif x > x_max:
-                x_max = x
-            if y < y_min:
-                y_min = y
-            elif y > y_max:
-                y_max = y
-
-        # Find the most common color in the text region
+        # Get background color
         background_color = get_background_color(image, x_min, y_min, x_max, y_max)
 
-        # Draw a rectangle to cover the text region with the original background color
+        # Draw background
         draw.rectangle(((x_min, y_min), (x_max, y_max)), fill=background_color)
 
-        # Calculate font size and position
-        font, x, y = get_font(image, translated, x_max - x_min, y_max - y_min)
+        # Calculate font and position
+        font, x, y = get_font(image, translated_text, x_max - x_min, y_max - y_min)
 
-        # Draw translated text inside the box
+        # Draw text
         draw.text(
             (x_min + x, y_min + y),
-            translated,
+            translated_text,
             fill=get_text_fill_color(background_color),
             font=font,
         )
 
     return image
-
-
-def group_boxes_by_line(box_text_list, y_tolerance_ratio=0.5):
-    """
-    Group OCR results into lines, sort them correctly, and flatten the results.
-    
-    This function first groups bounding boxes into lines based on vertical proximity,
-    then sorts the boxes within each line by horizontal position (left to right).
-    
-    Parameters:
-        box_text_list: List of tuples, each in the format (bounding_box, text).
-        y_tolerance_ratio: Ratio of bounding box height used as tolerance to determine if two boxes are on the same line.
-
-    Returns:
-        List of (bounding_box, text) tuples sorted in reading order.
-    """
-    if not box_text_list:
-        return []
-
-    # Sort primarily by the top y-coordinate of the bounding boxes
-    boxes_sorted = sorted(box_text_list, key=lambda item: item[0][0][1])
-
-    lines = []
-    current_line = []
-    
-    if boxes_sorted:
-        current_line.append(boxes_sorted[0])
-        for i in range(1, len(boxes_sorted)):
-            prev_box = current_line[-1][0]
-            current_box = boxes_sorted[i][0]
-
-            # Calculate the vertical center of the last bounding box in the current line
-            prev_box_center_y = (prev_box[0][1] + prev_box[2][1]) / 2
-            
-            # Calculate the vertical center of the current bounding box being checked
-            current_box_center_y = (current_box[0][1] + current_box[2][1]) / 2
-
-            # Calculate the height of the last bounding box in the line
-            prev_box_height = abs(prev_box[0][1] - prev_box[2][1])
-
-            # If the vertical distance is within tolerance, they are on the same line
-            if abs(prev_box_center_y - current_box_center_y) <= prev_box_height * y_tolerance_ratio:
-                current_line.append(boxes_sorted[i])
-            else:
-                # Finalize the previous line and start a new one
-                lines.append(current_line)
-                current_line = [boxes_sorted[i]]
-    
-    # Append the last line
-    if current_line:
-        lines.append(current_line)
-
-    # Sort each line by x-coordinate and flatten the list of lines
-    sorted_and_flattened = []
-    for line in lines:
-        # Sort the line by the minimum x-coordinate (left edge)
-        line_sorted_by_x = sorted(line, key=lambda item: item[0][0][0])
-        sorted_and_flattened.extend(line_sorted_by_x)
-
-    return sorted_and_flattened
 
 
 # Initialize OCR reader
@@ -265,57 +207,42 @@ translator = Translator(source="English",
     model=your_model
     )
 
-# Define input and output locations
 input_folder = "input"
 output_folder = "output"
 
-# Process each image file in the input folder
-files = os.listdir(input_folder)
-image_files = [file for file in files if file.endswith((".jpg", ".jpeg", ".png"))]
-for filename in image_files:
-    
-    print(f'[INFO] Processing {filename}...')
-
-    image_path = os.path.join(input_folder, filename)
-
-    # Extract text and positions
-    extracted_text_boxes = group_boxes_by_line(perform_ocr(image_path, reader))
-
-    # Translate text
-    translated_texts = []
-    all_original_texts = []
-    all_translated_text = ""
-
-    for text_box, text in extracted_text_boxes:
-        all_original_texts.append(text)
+for filename in os.listdir(input_folder):
+    if not filename.lower().endswith((".jpg", ".jpeg", ".png")):
+        continue
         
-    # Combine all original texts with <ng> separator
-    all_translated_input = '<ng>'.join(all_original_texts)
+    print(f'[INFO] Processing {filename}...')
+    image_path = os.path.join(input_folder, filename)
+    
+    # OCR recognition
+    try:
+        extracted = perform_ocr(image_path, reader)
+    except Exception as e:
+        print(f'[ERROR] OCR recognition failed: {e}')
+        continue
+    
+    # Construct structured input
+    structured_input = [
+        {
+            'text': text, 
+            'text_box': [[int(coord[0]), int(coord[1])] for coord in box]
+        } 
+        for box, text in extracted
+    ]
+    
+    # Translation
+    translated_data = translator.translate(structured_input)
 
-    # Perform translation
-    all_translated_text = translator.translate(all_translated_input)
-
-    # Split translated result into segments based on original text count
-    translated_segments = all_translated_text.split('<ng>', len(all_original_texts)-1)
-
-    # If there are fewer translated segments than original texts, merge remaining parts into the last segment
-    if len(translated_segments) < len(all_original_texts):
-        remaining_text = '<ng>'.join(translated_segments[len(all_original_texts)-1:])
-        remaining_text = remaining_text.replace("<ng>", "")
-        translated_segments = translated_segments[:len(all_original_texts)-1] + [remaining_text]
-
-    translated_texts = translated_segments
-
-    print("\nTranslated: ", translated_texts)
-    print("\nOriginal: ", all_original_texts)
-
-    # Replace original text with translated text
-    image = replace_text_with_translation(image_path, translated_texts, extracted_text_boxes)
-
-    # Save modified image
-    base_filename, extension = os.path.splitext(filename)
-    output_filename = f"{base_filename}-translated{extension}"
-    output_path = os.path.join(output_folder, output_filename)
+    
+    # Draw on image
+    image = Image.open(image_path)
+    image = replace_text_with_translation(image, translated_data)
+    
+    # Save
+    base, ext = os.path.splitext(filename)
+    output_path = os.path.join(output_folder, f"{base}-translated{ext}")
     image.save(output_path)
-
-    print(f'[INFO] Saved as {output_filename}...')
+    print(f'[INFO] Saved as {os.path.basename(output_path)}...')
