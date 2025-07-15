@@ -37,3 +37,77 @@
   ```bash
   git clone https://github.com/your-username/your-repo-name.git
   cd your-repo-name
+  ```
+- **安装依赖**:
+  为了方便，建议你创建一个 `requirements.txt` 文件，内容如下：
+  ```txt
+  Pillow
+  requests
+  colorama
+  ```
+  然后运行以下命令安装：
+  ```bash
+  pip install -r requirements.txt
+  ```
+
+### 2. 进行配置
+
+项目根目录下应该有一个 `config.ini` 文件。如果没有，请根据下面的模板创建一个，或者将代码中的 `config_file = 'config.ini'` 改为您自己的配置文件名。
+
+```ini
+# config.ini
+[Translator]
+# 你的API密钥，例如 SiliconFlow, OpenAI, or other compatible services
+api_key = None
+# API的接入点地址
+api_base = https://api.siliconflow.cn
+# 使用的视觉语言模型名称
+model_name = Qwen/Qwen2.5-VL-32B-Instruct
+# 发送给模型的指令 (Prompt)。可以根据需求修改，但务必保留JSON格式的要求
+model_prompt = """你是一个专业OCR引擎。严格按以下要求处理图像：
+1. 识别图中所有英文文字并翻译成中文输出
+2. 为每个文字区域输出检测框坐标
+3. 输出格式：每行一个JSON对象
+{
+  "text": "译文", 
+  "box": [x_min, y_min, x_max, y_max]
+}
+
+请仔细识别图片中的外语，准确翻译并提供精确的边界框像素化坐标。只许回复json对象，不要注释"""
+
+[Image]
+# 译文背景的透明度 (0-255, 0为全透明, 255为不透明)
+text_box_transparency = 180
+# 背景色取样后，对其进行的颜色调整强度（数值越大，与原背景色差异越大）
+background_discoloration_strength = 40
+# 从文本框边缘向外扩展多少像素来取样背景色
+background_sample_margin = 10
+# 绘制译文所用的字体文件路径
+font_path = font/font.ttf
+```
+
+**重要**:
+- 打开 `config.ini` 文件。
+- 在 `[Translator]` 部分填入你的 `api_key`。脚本默认使用 SiliconFlow，你也可以更换为其他兼容 OpenAI API 格式的 VLM 服务商，并相应修改 `api_base` 和 `model_name`。
+- 确保 `[Image]` 部分的 `font_path` 指向一个有效的中文字体文件。程序会自动创建 `font` 文件夹，你需要将字体文件（如 `font.ttf`）放入其中。
+
+### 3. 开始翻译
+
+1.  将需要翻译的图片（如 `.jpg`, `.png`）放入 `input` 文件夹。
+2.  运行主程序：
+    ```bash
+    python main.py
+    ```
+3.  等待程序执行完毕，翻译好的图片将会出现在 `output` 文件夹中，文件名格式为 `原文件名-translated.后缀`。
+
+## ⚠️ 注意事项与局限性
+
+- **API 依赖**: 本工具的性能和效果强依赖于你所选择的 VLM 模型。模型的识别精度、翻译质量和响应速度会直接影响最终结果。
+- **坐标精度**: VLM 返回的坐标可能不是 100% 精确，有时会导致译文覆盖位置有轻微偏差。
+- **空间限制**: 如果原文区域过小，而译文过长，即使经过自动缩放和换行，文本也可能显得拥挤或超出边界。代码中的 `get_wrapped_text_and_font` 函数已尽力优化此问题。
+- **费用**: 使用商业 VLM API 可能会产生费用，请注意你的 API 服务商的计费规则。
+
+## 🙏 致谢
+
+- **Pillow (PIL Fork)**: 强大的图像处理库。
+- 本项目的设计和部分实现受到了 [python-image-translator](https://github.com/boysugi20/python-image-translator) by [boysugi20](https://github.com/boysugi20) 的启发，在此表示感谢。
