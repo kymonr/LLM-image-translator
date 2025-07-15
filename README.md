@@ -1,42 +1,39 @@
-### [中文][zh] | [English][en]
+# LLM-V-Trans | 基于视觉语言模型（VLM）的图像翻译器
 
-# 大语言模型图片翻译器
+[简体中文](./README.md) | [English](./README_en.md)
 
+一个功能强大的本地图像翻译工具，利用先进的视觉语言模型（VLM）实现对图片内文字的精准识别、翻译和无缝替换。告别传统OCR+翻译的繁琐流程，VLM一步到位，效果更佳。
 
-本项目结合光学字符识别（OCR）与翻译技术，实现图片内文本的跨语言翻译。主要流程如下：
+<!-- 你可以在这里插入一张效果对比图 -->
+<!-- <p align="center">
+  <img src="path/to/your/comparison_image.png" width="800"/>
+</p> -->
 
-1. **OCR处理**：通过EasyOCR库从输入图片中提取文本及其定位框
-2. **文本翻译**：调用LLM API对提取的文本进行翻译
-3. **文本替换**：将翻译后的文本按原位置和样式覆盖到图片上
-4. **输出结果**：最终生成带翻译文本的图片并保存至输出文件夹
+## ✨ 特性
 
-## 环境配置
+- **🚀 一步到位**: 直接调用视觉语言模型（如 Qwen-VL），在一个步骤内完成OCR识别和文本翻译，上下文理解更准。
+- **🎨 智能美化**: 自动在原文位置上生成与周围背景色融为一体的半透明图层，覆盖原文，观感自然。
+- **✍️ 动态字体**: 根据原文区域大小，自动计算最合适的字体大小并进行换行，确保译文完整且美观地展示。
+- **🌗 自动配色**: 智能判断背景亮度，为译文选择高对比度的颜色（黑或白），保证可读性。
+- **⚙️ 高度可配置**: 所有关键参数（API密钥、模型、Prompt、字体、样式等）均可通过 `config.ini` 文件轻松配置，无需修改代码。
+- **🗣️ 清晰日志**: 使用彩色日志输出，清晰展示程序运行的每一个步骤，便于调试和追踪。
 
-#### 安装步骤
+## 📖 工作流程
 
-1. 将代码仓库克隆到本地
-2. 执行`pip install easyocr PIL`安装Python依赖包
+1.  **加载配置**: 程序启动，读取 `config.ini` 中的设置。
+2.  **API请求**: 遍历 `input` 文件夹中的图片，将其编码后连同指定的 Prompt 发送给 VLM API。
+3.  **解析响应**: VLM 返回包含译文和对应原文坐标的 JSON 数据。
+4.  **图像绘制**:
+    - 在原图上创建一个新的绘制层。
+    - 根据坐标，在每个文本区域绘制一个与背景色相似的半透明矩形，以遮盖原文。
+    - 动态计算最佳字体大小和换行方式，将译文居中绘制在矩形上。
+5.  **保存结果**: 将绘制层与原图合并，生成最终的翻译图片，并保存到 `output` 文件夹。
 
-## 使用说明
+## 🛠️ 安装与使用
 
-1. 将待翻译图片放入`input`文件夹
-2. 将`main.py`脚本这一行`translator = Translator(source="英文", target="中文", apikey=yourapi_key, api_base=yourapi_url, model=your_model)`中的openai兼容api的api_key和api_url填写好。
-3. 确保你的字体文件路径为：font/font.ttf
-4. 运行`main.py`脚本
-5. 翻译结果将保存至`output`文件夹
+### 1. 准备环境
 
-## 注意事项
-
-- 支持的OCR语言列表参见[此链接](https://www.jaided.ai/easyocr/)
-- 可在脚本中调整文本语种、识别阈值、翻译服务或图像处理参数
-- 为了使用大语言模型联系全文翻译，文字无法一一对应，可能导致文字被压缩的很小。目前我无法解决。
-
-## 致谢
-
-- [EasyOCR](https://github.com/JaidedAI/EasyOCR) - OCR处理核心库
-- [Pillow (PIL Fork)](https://python-pillow.org/) - 图像处理工具库
-- [原仓库python-image-translator](https://github.com/boysugi20/python-image-translator) 和 [原作者boysugi20](https://github.com/boysugi20)
-
-[en]: https://github.com/jedzqer/LLM-image-translator/blob/master/README_en.md "This README is translated by AI"
-
-[zh]: https://github.com/jedzqer/LLM-image-translator/blob/master/README.md
+- **克隆仓库**:
+  ```bash
+  git clone https://github.com/your-username/your-repo-name.git
+  cd your-repo-name
