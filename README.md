@@ -99,6 +99,7 @@ font_path = font/font.ttf
     python main.py
     ```
 3.  等待程序执行完毕，翻译好的图片将会出现在 `output` 文件夹中，文件名格式为 `原文件名-translated.后缀`。
+4.  或者运行app.py， 打开网页localhost:7860使用。
 
 ## ⚠️ 注意事项与局限性
 
