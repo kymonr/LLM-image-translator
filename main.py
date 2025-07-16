@@ -7,6 +7,7 @@ import re
 from io import BytesIO
 import configparser
 from colorama import Fore, Style, init
+import math
 
 # 初始化colorama，使其在Windows等平台上也能正常显示颜色
 init(autoreset=True)
@@ -144,10 +145,41 @@ class VLTranslator:
         
         return results
 
-def get_wrapped_text_and_font(text: str, width: int, height: int, font_path: str = "font/font.ttf") -> tuple:
+def calculate_font_size_by_area(text: str, total_area: int, area_ratio: float = 0.8) -> int:
     """
-    根据给定的文本区域大小，计算并返回最适合绘制文本的字体大小，
-    并进行自动换行。
+    根据文本背景总面积和文字数量计算合适的字体大小。
+    
+    Args:
+        text (str): 需要渲染的文本
+        total_area (int): 文本背景的总面积（像素）
+        area_ratio (float): 面积缩放比例，用于给文字留出边距
+    
+    Returns:
+        int: 计算出的字体大小
+    """
+    if not text:
+        return 12  # 默认字体大小
+    
+    # 计算文字数量（中文字符和英文字符都算作1个字符）
+    char_count = len(text)
+    
+    # 计算每个字符的平均面积
+    char_area = (total_area * area_ratio) / char_count
+    
+    # 假设字符是正方形，计算字体大小
+    # 字体大小大约等于字符高度，而字符宽度通常略小于高度
+    font_size = int(math.sqrt(char_area))
+    
+    # 限制字体大小在合理范围内
+    font_size = max(8, min(font_size, 200))
+    
+    log_debug(f"文本 '{text}' 字符数: {char_count}, 总面积: {total_area}, 单字符面积: {char_area:.2f}, 计算字体大小: {font_size}")
+    
+    return font_size
+
+def get_wrapped_text_and_font_by_area(text: str, width: int, height: int, font_path: str = "font/font.ttf") -> tuple:
+    """
+    基于文本背景面积计算字体大小，然后进行文本换行。
 
     Args:
         text (str): 需要计算字体大小和换行的文本字符串。
@@ -157,7 +189,7 @@ def get_wrapped_text_and_font(text: str, width: int, height: int, font_path: str
 
     Returns:
         tuple: 包含以下元素的元组：
-               - font (PIL.ImageFont.FreeTypeFont): 最佳字体对象。
+               - font (PIL.ImageFont.FreeTypeFont): 字体对象。
                - wrapped_lines (list[str]): 包含分行后文本的列表。
                - text_height (int): 文本绘制后的总高度。
                - x_offset (int): 文本在x轴上的居中偏移量。
@@ -166,172 +198,191 @@ def get_wrapped_text_and_font(text: str, width: int, height: int, font_path: str
     if not text:
         return None, [], 0, 0, 0
 
-    font_path = os.path.abspath(font_path) # 确保字体路径是绝对路径
+    font_path = os.path.abspath(font_path)
     try:
-        ImageFont.truetype(font_path, size=10) # 预检查字体文件是否存在
+        ImageFont.truetype(font_path, size=10)
     except OSError:
         log_warning(f"字体文件 '{font_path}' 未找到或损坏，使用PIL默认字体。")
-        font_path = None # 使用None表示后续用默认字体
+        font_path = None
 
-    best_font = None
-    best_wrapped_lines = []
-    best_text_height = 0
-    best_x_offset = 0
-    best_y_offset = 0
+    # 计算文本背景总面积
+    total_area = width * height
+    
+    # 根据面积计算字体大小
+    calculated_font_size = calculate_font_size_by_area(text, total_area)
+    
+    # 创建字体对象
+    try:
+        if font_path:
+            font = ImageFont.truetype(font_path, size=calculated_font_size)
+        else:
+            font = ImageFont.load_default()
+    except OSError:
+        font = ImageFont.load_default()
+        log_warning(f"无法加载字体文件，使用默认字体")
 
-    # 创建一个临时的、不关联任何实际图像的 ImageDraw 对象，仅用于测量文本尺寸。
+    # 创建临时绘图对象用于测量文本尺寸
     dummy_draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
 
-    for size in range(1, 500): # 尝试从小到大的字体尺寸
-        try:
-            if font_path:
-                current_font = ImageFont.truetype(font_path, size=size)
-            else:
-                current_font = ImageFont.load_default()
-        except OSError:
-            # 如果加载失败，继续尝试下一个大小，或者直接跳出
-            break 
-        
-        # 尝试按单词边界或字符进行换行
-        lines = []
-        current_line = []
-        words = text.split(' ') # 先按空格分割
-        if not words: # 如果是中文等没有空格的文本
-             words = list(text) # 按字符分割
+    # 进行文本换行
+    lines = []
+    current_line = []
+    words = text.split(' ')
+    if not words or len(words) == 1:  # 对于中文或单个长单词
+        words = list(text)  # 按字符分割
 
-        for word in words:
-            # 尝试将单词添加到当前行
-            test_line_text = ' '.join(current_line + [word])
-            bbox = dummy_draw.textbbox((0, 0), test_line_text, font=current_font)
-            text_w = bbox[2] - bbox[0]
+    for word in words:
+        # 尝试将单词添加到当前行
+        test_line_text = ''.join(current_line + [word]) if len(words) == len(text) else ' '.join(current_line + [word])
+        bbox = dummy_draw.textbbox((0, 0), test_line_text, font=font)
+        text_w = bbox[2] - bbox[0]
+        
+        if text_w <= width:  # 如果当前行加上新单词没有超出宽度
+            current_line.append(word)
+        else:  # 超出宽度，进行换行
+            if current_line:  # 如果当前行有内容，先保存这行
+                lines.append(''.join(current_line) if len(words) == len(text) else ' '.join(current_line))
+            current_line = [word]  # 新行从当前单词开始
             
-            if text_w <= width: # 如果当前行加上新单词没有超出宽度
-                current_line.append(word)
-            else: # 超出宽度，进行换行
-                if current_line: # 如果当前行有内容，先保存这行
-                    lines.append(' '.join(current_line))
-                current_line = [word] # 新行从当前单词开始
-                # 检查单个单词是否就超出了宽度（对于很长的单词或无空格的中文）
-                single_word_bbox = dummy_draw.textbbox((0, 0), word, font=current_font)
-                if single_word_bbox[2] - single_word_bbox[0] > width:
-                    # 如果单个单词就超出宽度，强制按字符切分
-                    temp_word_line = ''
-                    for char in word:
-                        test_char_line_text = temp_word_line + char
-                        char_bbox = dummy_draw.textbbox((0, 0), test_char_line_text, font=current_font)
-                        if char_bbox[2] - char_bbox[0] <= width:
-                            temp_word_line += char
-                        else:
-                            if temp_word_line:
-                                lines.append(temp_word_line)
-                            temp_word_line = char
-                    if temp_word_line:
-                        lines.append(temp_word_line)
-                    current_line = [] # 强制切分后，当前行清空
-        
-        if current_line: # 添加最后一行
-            lines.append(' '.join(current_line))
-
-        # 计算总高度
-        line_height = current_font.getmask("A").getbbox()[3] if current_font.getmask("A").getbbox() else size # 获取单行高度
-        
-        # 对于多行文本，增加行间距或简单乘行数
-        total_text_height = line_height * len(lines)
-        if len(lines) > 1 : # 针对多行文本做微调
-             total_text_height += (len(lines) -1) * (current_font.size // 5) # 简单增加行间距
-
-        # 检查是否超出文本框总高度
-        if total_text_height > height:
-            break # 超出高度，停止增大字体
-
-        # 找到最长行的宽度用于居中计算
-        max_line_width = 0
-        for line in lines:
-            line_bbox = dummy_draw.textbbox((0, 0), line, font=current_font)
-            max_line_width = max(max_line_width, line_bbox[2] - line_bbox[0])
-
-        # 如果最长行宽度超出区域，则也停止增大字体
-        if max_line_width > width:
-            break
-
-        # 更新最佳字体和相关尺寸信息
-        best_font = current_font
-        best_wrapped_lines = lines
-        best_text_height = total_text_height
-        
-        # 计算文本在给定区域内的居中偏移量 (基于最长行宽度和总高度)
-        best_x_offset = (width - max_line_width) // 2 
-        best_y_offset = (height - best_text_height) // 2
-        
-    # 如果循环结束后best_font仍然为None（意味着文本过大，即使最小字体也超出），
-    # 则返回一个默认字体并尽可能多的文本
-    if best_font is None:
-        try:
-            if font_path:
-                best_font = ImageFont.truetype(font_path, size=1)
-            else:
-                best_font = ImageFont.load_default()
-        except OSError:
-            best_font = ImageFont.load_default() # 最终兜底
-
-        # 重新计算一次，用最小字体尝试分行，避免完全空行
-        lines = []
-        current_line = []
-        words = text.split(' ')
-        if not words:
-             words = list(text)
-
-        for word in words:
-            test_line_text = ' '.join(current_line + [word])
-            bbox = dummy_draw.textbbox((0, 0), test_line_text, font=best_font)
-            text_w = bbox[2] - bbox[0]
-            
-            if text_w <= width:
-                current_line.append(word)
-            else:
+            # 检查单个单词是否就超出了宽度
+            single_word_bbox = dummy_draw.textbbox((0, 0), word, font=font)
+            if single_word_bbox[2] - single_word_bbox[0] > width:
+                # 如果单个单词就超出宽度，强制按字符切分
                 if current_line:
-                    lines.append(' '.join(current_line))
-                current_line = [word]
-                single_word_bbox = dummy_draw.textbbox((0, 0), word, font=best_font)
-                if single_word_bbox[2] - single_word_bbox[0] > width:
-                    temp_word_line = ''
-                    for char in word:
-                        test_char_line_text = temp_word_line + char
-                        char_bbox = dummy_draw.textbbox((0, 0), test_char_line_text, font=best_font)
-                        if char_bbox[2] - char_bbox[0] <= width:
-                            temp_word_line += char
-                        else:
-                            if temp_word_line:
-                                lines.append(temp_word_line)
-                            temp_word_line = char
-                    if temp_word_line:
-                        lines.append(temp_word_line)
-                    current_line = []
-        if current_line:
-            lines.append(' '.join(current_line))
+                    lines.append(''.join(current_line) if len(words) == len(text) else ' '.join(current_line))
+                current_line = []
+                temp_word_line = ''
+                for char in word:
+                    test_char_line_text = temp_word_line + char
+                    char_bbox = dummy_draw.textbbox((0, 0), test_char_line_text, font=font)
+                    if char_bbox[2] - char_bbox[0] <= width:
+                        temp_word_line += char
+                    else:
+                        if temp_word_line:
+                            lines.append(temp_word_line)
+                        temp_word_line = char
+                if temp_word_line:
+                    lines.append(temp_word_line)
+    
+    if current_line:  # 添加最后一行
+        lines.append(''.join(current_line) if len(words) == len(text) else ' '.join(current_line))
+
+    # 计算文本总高度
+    line_height = font.getmask("M").getbbox()[3] if font.getmask("M").getbbox() else calculated_font_size
+    line_spacing = max(2, calculated_font_size // 8)  # 行间距
+    total_text_height = line_height * len(lines)
+    if len(lines) > 1:
+        total_text_height += (len(lines) - 1) * line_spacing
+
+    # 如果文本高度超出区域，尝试减小字体大小
+    if total_text_height > height and calculated_font_size > 8:
+        # 递归调用，使用更小的字体
+        smaller_font_size = int(calculated_font_size * 0.8)
+        try:
+            if font_path:
+                smaller_font = ImageFont.truetype(font_path, size=smaller_font_size)
+            else:
+                smaller_font = ImageFont.load_default()
+        except OSError:
+            smaller_font = ImageFont.load_default()
         
-        best_wrapped_lines = lines
-        line_height = best_font.getmask("A").getbbox()[3] if best_font.getmask("A").getbbox() else 1
-        best_text_height = line_height * len(lines)
-        if len(lines) > 1 : 
-             best_text_height += (len(lines) -1) * (best_font.size // 5)
+        # 重新计算换行和高度
+        return get_wrapped_text_and_font_by_area_recursive(text, width, height, font_path, smaller_font_size)
+
+    # 计算最长行的宽度用于居中
+    max_line_width = 0
+    for line in lines:
+        line_bbox = dummy_draw.textbbox((0, 0), line, font=font)
+        max_line_width = max(max_line_width, line_bbox[2] - line_bbox[0])
+
+    # 计算居中偏移量
+    x_offset = max(0, (width - max_line_width) // 2)
+    y_offset = max(0, (height - total_text_height) // 2)
+
+    return font, lines, total_text_height, x_offset, y_offset
+
+def get_wrapped_text_and_font_by_area_recursive(text: str, width: int, height: int, font_path: str, font_size: int) -> tuple:
+    """
+    递归辅助函数，用于在字体大小需要调整时重新计算文本换行。
+    """
+    if font_size < 8:
+        font_size = 8
+    
+    try:
+        if font_path:
+            font = ImageFont.truetype(font_path, size=font_size)
+        else:
+            font = ImageFont.load_default()
+    except OSError:
+        font = ImageFont.load_default()
+
+    dummy_draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+
+    # 重新进行文本换行
+    lines = []
+    current_line = []
+    words = text.split(' ')
+    if not words or len(words) == 1:
+        words = list(text)
+
+    for word in words:
+        test_line_text = ''.join(current_line + [word]) if len(words) == len(text) else ' '.join(current_line + [word])
+        bbox = dummy_draw.textbbox((0, 0), test_line_text, font=font)
+        text_w = bbox[2] - bbox[0]
         
-        max_line_width = 0
-        for line in lines:
-            line_bbox = dummy_draw.textbbox((0, 0), line, font=best_font)
-            max_line_width = max(max_line_width, line_bbox[2] - line_bbox[0])
+        if text_w <= width:
+            current_line.append(word)
+        else:
+            if current_line:
+                lines.append(''.join(current_line) if len(words) == len(text) else ' '.join(current_line))
+            current_line = [word]
+            
+            single_word_bbox = dummy_draw.textbbox((0, 0), word, font=font)
+            if single_word_bbox[2] - single_word_bbox[0] > width:
+                if current_line:
+                    lines.append(''.join(current_line) if len(words) == len(text) else ' '.join(current_line))
+                current_line = []
+                temp_word_line = ''
+                for char in word:
+                    test_char_line_text = temp_word_line + char
+                    char_bbox = dummy_draw.textbbox((0, 0), test_char_line_text, font=font)
+                    if char_bbox[2] - char_bbox[0] <= width:
+                        temp_word_line += char
+                    else:
+                        if temp_word_line:
+                            lines.append(temp_word_line)
+                        temp_word_line = char
+                if temp_word_line:
+                    lines.append(temp_word_line)
+    
+    if current_line:
+        lines.append(''.join(current_line) if len(words) == len(text) else ' '.join(current_line))
 
-        best_x_offset = max(0, (width - max_line_width) // 2)
-        best_y_offset = (height - best_text_height) // 2
+    # 计算文本总高度
+    line_height = font.getmask("M").getbbox()[3] if font.getmask("M").getbbox() else font_size
+    line_spacing = max(2, font_size // 8)
+    total_text_height = line_height * len(lines)
+    if len(lines) > 1:
+        total_text_height += (len(lines) - 1) * line_spacing
 
-        log_warning(f"文本 '{text}' 无法完全适应给定区域 [{width}x{height}]。将使用最小字体和强制换行。")
+    # 如果仍然超出高度，继续递归减小字体
+    if total_text_height > height and font_size > 8:
+        return get_wrapped_text_and_font_by_area_recursive(text, width, height, font_path, int(font_size * 0.9))
 
+    # 计算居中偏移量
+    max_line_width = 0
+    for line in lines:
+        line_bbox = dummy_draw.textbbox((0, 0), line, font=font)
+        max_line_width = max(max_line_width, line_bbox[2] - line_bbox[0])
 
-    return best_font, best_wrapped_lines, best_text_height, best_x_offset, best_y_offset
+    x_offset = max(0, (width - max_line_width) // 2)
+    y_offset = max(0, (height - total_text_height) // 2)
+
+    return font, lines, total_text_height, x_offset, y_offset
 
 def add_discoloration(color: tuple, strength: int) -> tuple:
     """
-    调整RGB颜色值以增加一些“褪色”效果，使其不那么鲜艳或与背景有一定区分度。
+    调整RGB颜色值以增加一些"褪色"效果，使其不那么鲜艳或与背景有一定区分度。
     """
     r, g, b = color
     r = max(0, min(255, r + strength))
@@ -383,7 +434,7 @@ def get_text_fill_color(background_color: tuple) -> tuple:
 
 def replace_text_with_translation(image: Image.Image, translated_data: list, config: configparser.ConfigParser) -> Image.Image:
     """
-    在原始图片上绘制翻译后的中文文本，并为文本创建半透明背景。
+    在原始图片上绘制翻译后的文本，并为文本创建半透明背景。
     """
     img_width, img_height = image.size
     
@@ -435,9 +486,9 @@ def replace_text_with_translation(image: Image.Image, translated_data: list, con
 
         draw.rectangle(((x_min, y_min), (x_max, y_max)), fill=background_color_rgba)
 
-        # 获取字体和分行文本
+        # 使用新的基于面积的字体计算方法
         font, wrapped_lines, text_total_height, x_offset, y_offset = \
-            get_wrapped_text_and_font(translated_text, box_width, box_height, font_path)
+            get_wrapped_text_and_font_by_area(translated_text, box_width, box_height, font_path)
         
         if not font or not wrapped_lines:
             log_warning(f"无法为文本 '{translated_text}' 计算字体或分行，跳过绘制。")
@@ -447,11 +498,8 @@ def replace_text_with_translation(image: Image.Image, translated_data: list, con
 
         # 逐行绘制文本
         current_y = y_min + y_offset
-        # 估算行高 (假设行高接近字体大小，更精确的计算需要getfontbbox或getmask)
-        # PIL的getbbox在textbbox之后已经包含descender，但这里我们还需要line-to-line的步进
-        # 这里用font.size估算，或者更精确的用font.getmask('A').getbbox()[3] if available
         line_height_base = font.getmask("M").getbbox()[3] if font.getmask("M").getbbox() else font.size
-        line_spacing = font.size // 5 # 行间距
+        line_spacing = max(2, font.size // 8)
         
         for line in wrapped_lines:
             # 重新计算本行的X偏移，使其居中
@@ -465,12 +513,12 @@ def replace_text_with_translation(image: Image.Image, translated_data: list, con
                 fill=text_color_rgba,
                 font=font,
             )
-            current_y += (line_height_base + line_spacing) # 移动到下一行的Y坐标
+            current_y += (line_height_base + line_spacing)
+            
             # 如果当前行的底部超出了原始文本框的底部，停止绘制
             if current_y > y_max:
                 log_debug(f"文本 '{line}' ( part of '{translated_text}') 超出界限，停止绘制。")
                 break
-
 
     final_image = Image.alpha_composite(base_image, txt_layer)
     return final_image
@@ -500,7 +548,6 @@ def main():
     os.makedirs(input_folder, exist_ok=True)
     os.makedirs(output_folder, exist_ok=True)
     os.makedirs(os.path.dirname(config.get('Image', 'font_path', fallback='font/font.ttf')), exist_ok=True)
-
 
     log_info(f"输入文件夹: {input_folder}")
     log_info(f"输出文件夹: {output_folder}")
