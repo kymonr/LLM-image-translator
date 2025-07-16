@@ -591,5 +591,134 @@ def main():
     
     log_info("\n所有图片处理完成。")
 
+
+def process_image_translation(image_input, config_path='config.ini'):
+    """
+    图片翻译处理对外接口函数
+    
+    外部模块调用方法：
+    1. 导入模块：from LLMtranslator import process_image_translation
+    2. 准备配置文件：确保config.ini存在且包含必要的API配置
+    3. 调用函数：
+       - 传入图片路径：result = process_image_translation('path/to/image.jpg')
+       - 传入PIL图片对象：result = process_image_translation(pil_image)
+       - 指定配置文件：result = process_image_translation('image.jpg', 'custom_config.ini')
+    
+    Args:
+        image_input (str | PIL.Image.Image): 图片输入，可以是：
+            - 图片文件路径字符串 (如: 'image.jpg')
+            - PIL.Image.Image对象
+        config_path (str, optional): 配置文件路径，默认为 'config.ini'
+    
+    Returns:
+        dict: 处理结果字典，包含以下键值：
+            - 'success' (bool): 处理是否成功
+            - 'message' (str): 处理结果消息
+            - 'translated_image' (PIL.Image.Image | None): 翻译后的图片对象，失败时为None
+            - 'detected_texts' (list | None): 检测到的文字区域信息列表，失败时为None
+            - 'error' (str | None): 错误信息，成功时为None
+    
+    示例：
+        # 方式1：使用图片路径
+        result = process_image_translation('input/test.jpg')
+        if result['success']:
+            result['translated_image'].save('output/translated.jpg')
+            print(f"检测到{len(result['detected_texts'])}个文字区域")
+        else:
+            print(f"处理失败: {result['error']}")
+        
+        # 方式2：使用PIL图片对象
+        from PIL import Image
+        img = Image.open('test.jpg')
+        result = process_image_translation(img)
+        
+        # 方式3：自定义配置文件
+        result = process_image_translation('test.jpg', 'my_config.ini')
+    """
+    
+    # 初始化返回结果
+    result = {
+        'success': False,
+        'message': '',
+        'translated_image': None,
+        'detected_texts': None,
+        'error': None
+    }
+    
+    try:
+        # 检查并加载配置文件
+        if not os.path.exists(config_path):
+            result['error'] = f"配置文件 '{config_path}' 不存在"
+            result['message'] = "配置文件读取失败"
+            return result
+        
+        config = configparser.ConfigParser()
+        config.read(config_path, encoding='utf-8')
+        
+        # 检查API密钥
+        if config.get('Translator', 'api_key', fallback='None') == 'None':
+            result['error'] = "请在配置文件中设置有效的API密钥"
+            result['message'] = "API密钥未配置"
+            return result
+        
+        # 处理输入图片
+        if isinstance(image_input, str):
+            # 输入是文件路径
+            if not os.path.exists(image_input):
+                result['error'] = f"图片文件 '{image_input}' 不存在"
+                result['message'] = "图片文件不存在"
+                return result
+            
+            original_image = Image.open(image_input)
+            image_path_for_api = image_input
+        elif hasattr(image_input, 'mode') and hasattr(image_input, 'size'):
+            # 输入是PIL Image对象
+            original_image = image_input
+            # 为API调用创建临时文件
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+                original_image.save(tmp_file.name, 'PNG')
+                image_path_for_api = tmp_file.name
+        else:
+            result['error'] = "输入必须是图片文件路径或PIL.Image对象"
+            result['message'] = "输入类型错误"
+            return result
+        
+        # 初始化翻译器
+        translator = VLTranslator(config)
+        
+        # 进行OCR识别和翻译
+        translated_data = translator.ocr_and_translate(image_path_for_api)
+        
+        # 如果输入是PIL对象，清理临时文件
+        if not isinstance(image_input, str):
+            try:
+                os.unlink(image_path_for_api)
+            except:
+                pass  # 忽略删除临时文件的错误
+        
+        if not translated_data:
+            result['success'] = True
+            result['message'] = "未检测到任何可翻译文本"
+            result['translated_image'] = original_image.copy()
+            result['detected_texts'] = []
+            return result
+        
+        # 在图片上绘制翻译结果
+        processed_image = replace_text_with_translation(original_image, translated_data, config)
+        
+        # 成功处理
+        result['success'] = True
+        result['message'] = f"成功处理图片，检测到{len(translated_data)}个文字区域"
+        result['translated_image'] = processed_image
+        result['detected_texts'] = translated_data
+        
+        return result
+        
+    except Exception as e:
+        result['error'] = str(e)
+        result['message'] = "处理过程中发生错误"
+        return result
+
 if __name__ == "__main__":
     main()
