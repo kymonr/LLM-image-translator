@@ -4,10 +4,17 @@
 
 一个功能强大的本地图像翻译工具，利用先进的视觉语言模型（VLM）实现对图片内文字的精准识别、翻译和无缝替换。告别传统OCR+翻译的繁琐流程，VLM一步到位，效果更佳。
 
-<!-- 你可以在这里插入一张效果对比图 -->
-<!-- <p align="center">
-  <img src="path/to/your/comparison_image.png" width="800"/>
-</p> -->
+<div style="display: flex; justify-content: space-around;">
+  <div>
+    <p>原图</p>
+    <img src="https://github.com/jedzqer/LLM-image-translator/blob/master/input/test.jpeg" width="300">
+  </div>
+  <div>
+    <p>翻译结果</p>
+    <img src="https://github.com/jedzqer/LLM-image-translator/blob/master/output/test.jpeg" width="300">
+  </div>
+</div>
+
 
 ## ✨ 特性
 
