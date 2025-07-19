@@ -4,10 +4,10 @@
 
 A powerful, local image translation tool that leverages advanced Vision Language Models (VLMs) to accurately recognize, translate, and seamlessly replace text within images. Say goodbye to the cumbersome traditional OCR + Translation pipeline; VLM gets it done in a single, more effective step.
 
-<!-- You can insert a before/after comparison image here -->
-<!-- <p align="center">
-  <img src="path/to/your/comparison_image.png" width="800"/>
-</p> -->
+| 原图 | 翻译结果 |
+|------|----------|
+| ![after(https://github.com/jedzqer/LLM-image-translator/blob/master/input/test.jpeg) | ![done](https://github.com/jedzqer/LLM-image-translator/blob/master/output/test.jpeg) |
+
 
 ## ✨ Features
 
