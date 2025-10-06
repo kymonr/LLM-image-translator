@@ -1,114 +1,143 @@
-# LLM-V-Trans | Image Translator Powered by Vision Language Models (VLM)
+# LLM-V-Trans | Image Translator Based on Visual Language Model (VLM)
 
-[简体中文](../README.md) | [English](./README_en.md)
+[简体中文](./README.md) | [English](./README_en.md)
 
-A powerful, local image translation tool that leverages advanced Vision Language Models (VLMs) to accurately recognize, translate, and seamlessly replace text within images. Say goodbye to the cumbersome traditional OCR + Translation pipeline; VLM gets it done in a single, more effective step.
+A powerful local image translation tool offering both **command-line** and **web interface** usage modes. Leverages advanced Visual Language Models (VLM) to achieve precise text recognition, translation, and seamless in-place replacement within images. Streamlines the process by eliminating the traditional OCR + translation workflow — VLM handles it all in one step for superior results.
 
-<!-- You can insert a before/after comparison image here -->
-<!-- <p align="center">
-  <img src="path/to/your/comparison_image.png" width="800"/>
-</p> -->
+| Original Image | Translated Result |
+|----------------|-------------------|
+| ![Original](https://github.com/jedzqer/LLM-image-translator/blob/master/input/test.jpeg) | ![Result](https://github.com/jedzqer/LLM-image-translator/blob/master/output/test.jpeg) |
 
-## ✨ Features
+## ✨ Core Features
 
-- **🚀 One-Step Process**: Directly utilizes a Vision Language Model (e.g., Qwen-VL) to perform both OCR and translation in a single step, leading to better contextual understanding.
-- **🎨 Smart Inpainting**: Automatically generates a semi-transparent layer that blends with the surrounding background to cover the original text, resulting in a natural look.
-- **✍️ Dynamic Font Sizing**: Intelligently calculates the optimal font size and wraps text to fit perfectly within the original text's bounding box, ensuring the translation is complete and aesthetically pleasing.
-- **🌗 Auto Color Scheme**: Smartly determines the background luminance and selects a high-contrast text color (black or white) to guarantee readability.
-- **⚙️ Highly Configurable**: All key parameters (API key, model, prompt, font, styles, etc.) are easily configurable through a `config.ini` file without needing to modify the source code.
-- **🗣️ Verbose Logging**: Features colored console output to clearly display each step of the process, making debugging and tracking easy.
+- **🚀 All-in-One Process**: Directly utilizes Visual Language Models (e.g., Qwen-VL) to perform OCR and text translation in a single step, ensuring better contextual understanding.
+- **🎨 Intelligent Beautification**: Automatically generates semi-transparent overlays that blend with the surrounding background color to cover the original text, resulting in a natural appearance.
+- **✍️ Dynamic Font Sizing**: Automatically calculates the optimal font size based on the original text region and handles text wrapping to ensure the translation is displayed completely and aesthetically.
+- **🌗 Automatic Color Matching**: Intelligently assesses background brightness and selects a high-contrast color (black or white) for the translated text to ensure readability.
+- **⚙️ Highly Configurable**: All key parameters (API key, model, prompt, font, styles, etc.) are easily adjustable via the `config.ini` file without modifying the source code.
+- **🗣️ Clear Logging**: Uses colored log output to clearly display each step of the process, facilitating debugging and tracking.
+- **🖥️ Dual Usage Modes**: Supports both command-line batch processing and web interface single-image processing.
 
-## 📖 How It Works
+## 📖 Workflow
 
-1.  **Load Configuration**: The script starts by reading settings from `config.ini`.
-2.  **API Request**: It iterates through images in the `input` folder, encodes them, and sends them along with a specified prompt to the VLM API.
-3.  **Parse Response**: The VLM returns JSON data containing the translated text and the coordinates of the original text.
+1.  **Load Configuration**: The program starts and reads settings from `config.ini`.
+2.  **API Request**: Encodes the image and sends it along with the specified prompt to the VLM API.
+3.  **Parse Response**: The VLM returns JSON data containing the translations and their corresponding bounding box coordinates for the original text.
 4.  **Image Rendering**:
-    - A new drawing layer is created on top of the original image.
-    - For each text block, a semi-transparent rectangle, colored to match the local background, is drawn to hide the original text.
-    - The optimal font size and line breaks are dynamically calculated, and the translated text is drawn and centered within this rectangle.
-5.  **Save Result**: The drawing layer is composited with the original image, and the final translated image is saved to the `output` folder.
+    - Creates a new drawing layer on the original image.
+    - For each text region, draws a semi-transparent rectangle matching the background color to cover the original text.
+    - Dynamically calculates the optimal font size and wrapping, then centers and draws the translated text on the rectangle.
+5.  **Save Result**: Merges the drawing layer with the original image to produce the final translated image.
 
-## 🛠️ Installation and Usage
+## 🛠️ Quick Start
 
-### 1. Setup Environment
+### 1. Environment Setup
 
-- **Clone the repository**:
-  ```bash
-  git clone https://github.com/your-username/your-repo-name.git
-  cd your-repo-name
-  ```
-- **Install dependencies**:
-  For convenience, it's recommended to create a `requirements.txt` file with the following content:
-  ```txt
-  Pillow
-  requests
-  colorama
-  ```
-  Then, run the following command to install them:
-  ```bash
-  pip install -r requirements.txt
-  ```
+```bash
+# Clone the repository
+git clone https://github.com/your-username/LLM-V-Trans.git
+cd LLM-V-Trans
 
-### 2. Configure the Script
-
-There should be a `config.ini` file in the project root. If not, create one based on the template below or adjust the filename in the `main.py` script.
-
-```ini
-# config.ini
-[Translator]
-# Your API key from services like SiliconFlow, OpenAI, or other compatible providers
-api_key = None
-# The API base endpoint URL
-api_base = https://api.siliconflow.cn
-# The name of the Vision Language Model to use
-model_name = Qwen/Qwen2.5-VL-32B-Instruct
-# The prompt sent to the model. You can modify it, but ensure the JSON format requirement is kept.
-model_prompt = """You are a professional OCR engine. Strictly follow these instructions to process the image:
-1. Identify all English text in the image and translate it into Chinese.
-2. Output the bounding box coordinates for each text area.
-3. The output format must be one JSON object per line.
-{
-  "text": "Translated Text", 
-  "box": [x_min, y_min, x_max, y_max]
-}
-
-Please carefully identify the foreign language in the image, translate it accurately, and provide precise pixel coordinates for the bounding boxes. Only reply with JSON objects, no comments."""
-
-[Image]
-# Transparency of the translated text background (0-255, 0=fully transparent, 255=opaque)
-text_box_transparency = 180
-# Strength of color adjustment applied to the sampled background color (higher value = more difference)
-background_discoloration_strength = 40
-# How many pixels to extend outward from the text box to sample the background color
-background_sample_margin = 10
-# Path to the font file used for rendering translated text
-font_path = font/font.ttf
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-**IMPORTANT**:
-- Open the `config.ini` file.
-- Fill in your `api_key` under the `[Translator]` section. By default, the script is configured for SiliconFlow, but you can switch to any OpenAI-compatible VLM provider by changing `api_base` and `model_name`.
-- Ensure the `font_path` under `[Image]` points to a valid font file that supports your target language (e.g., Chinese). The script will create the `font` directory, and you'll need to place your font file (e.g., `font.ttf`) inside it.
+### 2. Configuration
 
-### 3. Start Translating
+Edit the `config.ini` file. Key configuration items:
 
-1.  Place the images you want to translate (e.g., `.jpg`, `.png`) into the `input` folder.
-2.  Run the main script:
-    ```bash
-    python main.py
-    ```
-3.  Wait for the process to complete. The translated images will appear in the `output` folder, named `original-filename-translated.ext`.
+```ini
+[Translator]
+api_key = your_api_key_here  # REQUIRED
+api_base = https://api.siliconflow.cn
+model_name = Qwen/Qwen2.5-VL-32B-Instruct
 
-## ⚠️ Notes and Limitations
+[Image]
+font_path = font/font.ttf  # Ensure the font file exists
+```
 
-- **API Dependency**: The performance and quality of this tool are heavily dependent on the chosen VLM. The model's recognition accuracy, translation quality, and response time will directly impact the final result.
-- **Coordinate Precision**: The bounding box coordinates returned by the VLM may not be 100% accurate, which can sometimes lead to slight misalignments of the translated text.
-- **Space Constraints**: If the original text area is too small and the translation is too long, the text may appear cramped or overflow the box, even with automatic resizing and wrapping. The `get_wrapped_text_and_font` function in the code does its best to mitigate this.
-- **Costs**: Using commercial VLM APIs may incur costs. Please be aware of the pricing policies of your API provider.
+### 3. Usage
 
+#### Option 1: Web Interface (Recommended for single images)
 
-## 🙏 Acknowledgements
+```bash
+python app.py
+```
 
-- **Pillow (PIL Fork)**: For being a powerful image processing library.
-- The design and parts of the implementation were inspired by [python-image-translator](https://github.com/boysugi20/python-image-translator) by [boysugi20](https://github.com/boysugi20). Thank you!
+Visit `http://localhost:7860` to use the web interface.
+
+#### Option 2: Command Line Batch Processing
+
+```bash
+# Place images in the 'input' folder, then run
+python LLMtranslator.py
+```
+
+Processed images will be saved in the `output` folder.
+
+## 📁 Project Structure
+
+```
+LLM-V-Trans/
+├── app.py                 # Gradio web interface
+├── LLMtranslator.py       # Core translation module
+├── config.ini            # Configuration file
+├── requirements.txt      # Dependencies list
+├── input/               # Input image directory (CLI mode)
+├── output/              # Output image directory (CLI mode)
+├── font/                # Font directory
+└── README.md           # Documentation
+```
+
+## ⚙️ Detailed Configuration
+
+### API Configuration (Translator Section)
+
+- `api_key`: **Required**. Supports services compatible with the OpenAI API, such as SiliconFlow.
+- `model_name`: Recommended to use models capable of visual tasks, like the Qwen-VL series.
+- `model_prompt`: Custom instructions can be defined, but must adhere to the required JSON output format.
+
+### Image Style Configuration (Image Section)
+
+- `text_box_transparency`: Transparency of the translation background overlay (0-255).
+- `background_discoloration_strength`: Strength of the background color adjustment.
+- `background_sample_margin`: Margin for sampling the background color.
+- `font_path`: Path to the Chinese font file.
+
+## ⚠️ Important Notes
+
+1.  **API Key**: You must configure a valid API key in `config.ini` before use.
+2.  **Font File**: Ensure the `font/font.ttf` file exists; otherwise, the system default font will be used.
+3.  **Image Formats**: Supports common formats like JPG, PNG, JPEG, BMP, GIF.
+4.  **Internet Connection**: A stable internet connection is required to call the VLM API.
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**Q: Error "Configuration file cannot be read" on startup.**
+A: Ensure the `config.ini` file exists in the project root directory.
+
+**Q: Translation fails with an API key error.**
+A: Check if the `api_key` in `config.ini` is correctly set.
+
+**Q: Cannot access the web interface.**
+A: Check if port 7860 is occupied, or try modifying the port setting in `app.py`.
+
+**Q: Translated text displays incorrectly.**
+A: Check if the font file exists, or adjust the font-size related parameters in `config.ini`.
+
+## 📄 License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Pillow (PIL Fork)**: Powerful image processing library.
+- **Gradio**: For enabling rapid building of ML demo interfaces.
+- This project's design was inspired by [python-image-translator](https://github.com/boysugi20/python-image-translator).
+
+---
+
+For questions or suggestions, please submit an Issue or Pull Request!
+```

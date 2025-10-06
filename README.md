@@ -2,54 +2,42 @@
 
 [简体中文](./README.md) | [English](./README_en.md)
 
-一个功能强大的本地图像翻译工具，利用先进的视觉语言模型（VLM）实现对图片内文字的精准识别、翻译和无缝替换。告别传统OCR+翻译的繁琐流程，VLM一步到位，效果更佳。
+一个功能强大的本地图像翻译工具，提供**命令行**和**网页界面**两种使用方式。利用先进的视觉语言模型（VLM）实现对图片内文字的精准识别、翻译和无缝替换。告别传统OCR+翻译的繁琐流程，VLM一步到位，效果更佳。
 
-<!-- 你可以在这里插入一张效果对比图 -->
-<!-- <p align="center">
-  <img src="path/to/your/comparison_image.png" width="800"/>
-</p> -->
+| 原图 | 翻译结果 |
+|------|----------|
+| ![原图](https://github.com/jedzqer/LLM-image-translator/blob/master/input/test.jpeg) | ![翻译结果](https://github.com/jedzqer/LLM-image-translator/blob/master/output/test.jpeg) |
 
-## ✨ 特性
+## ✨ 核心特性
 
 - **🚀 一步到位**: 直接调用视觉语言模型（如 Qwen-VL），在一个步骤内完成OCR识别和文本翻译，上下文理解更准。
 - **🎨 智能美化**: 自动在原文位置上生成与周围背景色融为一体的半透明图层，覆盖原文，观感自然。
-- **✍️ 动态字体**: 根据原文区域大小，自动计算最合适的字体大小并进行换行，确保译文完整且美观地展示。
 - **🌗 自动配色**: 智能判断背景亮度，为译文选择高对比度的颜色（黑或白），保证可读性。
 - **📐 归一化坐标**: 支持归一化坐标模式，解决部分API供应商压缩图片分辨率导致坐标不匹配的问题。
 - **⚙️ 高度可配置**: 所有关键参数（API密钥、模型、Prompt、字体、样式等）均可通过 `config.ini` 文件轻松配置，无需修改代码。
 - **🗣️ 清晰日志**: 使用彩色日志输出，清晰展示程序运行的每一个步骤，便于调试和追踪。
+- **🖥️ 双模使用**: 支持命令行批量处理和网页界面单张处理两种使用方式。
 
 ## 📖 工作流程
 
 1.  **加载配置**: 程序启动，读取 `config.ini` 中的设置。
-2.  **API请求**: 遍历 `input` 文件夹中的图片，将其编码后连同指定的 Prompt 发送给 VLM API。
+2.  **API请求**: 将图片编码后连同指定的 Prompt 发送给 VLM API。
 3.  **解析响应**: VLM 返回包含译文和对应原文坐标的 JSON 数据。
 4.  **图像绘制**:
     - 在原图上创建一个新的绘制层。
     - 根据坐标，在每个文本区域绘制一个与背景色相似的半透明矩形，以遮盖原文。
     - 动态计算最佳字体大小和换行方式，将译文居中绘制在矩形上。
-5.  **保存结果**: 将绘制层与原图合并，生成最终的翻译图片，并保存到 `output` 文件夹。
+5.  **保存结果**: 将绘制层与原图合并，生成最终的翻译图片。
 
-## 🛠️ 安装与使用
+## 🛠️ 快速开始
 
-### 1. 准备环境
+### 1. 环境准备
 
-- **克隆仓库**:
-  ```bash
-  git clone https://github.com/your-username/your-repo-name.git
-  cd your-repo-name
-  ```
-- **安装依赖**:
-  为了方便，建议你创建一个 `requirements.txt` 文件，内容如下：
-  ```txt
-  Pillow
-  requests
-  colorama
-  ```
-  然后运行以下命令安装：
-  ```bash
-  pip install -r requirements.txt
-  ```
+```bash
+# 克隆仓库
+git clone https://github.com/your-username/LLM-V-Trans.git
+cd LLM-V-Trans
+```
 
 ### 2. 进行配置
 
@@ -93,45 +81,92 @@ normalize_coordinates = False
 
 **重要**:
 - 打开 `config.ini` 文件。
-- 在 `[Translator]` 部分填入你的 `api_key`。脚本默认使用 SiliconFlow，你也可以更换为其他兼容 OpenAI API 格式的 VLM 服务商，并相应修改 `api_base` 和 `model_name`。
+- 在 `[Translator]` 部分填入你的 `api_key`。
 - 确保 `[Image]` 部分的 `font_path` 指向一个有效的中文字体文件。程序会自动创建 `font` 文件夹，你需要将字体文件（如 `font.ttf`）放入其中。
 - 如果发现翻译结果位置不正确，可以尝试将 `normalize_coordinates` 设置为 `True`。
 
-### 3. 开始翻译
+### 3. 使用方式
 
-#### 方式一：命令行模式
-1.  将需要翻译的图片（如 `.jpg`, `.png`）放入 `input` 文件夹。
-2.  运行主程序：
-    ```bash
-    python LLMtranslator.py
-    ```
-3.  等待程序执行完毕，翻译好的图片将会出现在 `output` 文件夹中，文件名格式为 `原文件名-translated.后缀`。
+#### 方式一：网页界面（推荐用于单张图片处理）
 
-#### 方式二：Web界面模式
-1.  运行Web应用：
-    ```bash
-    python app.py
-    ```
-2.  打开浏览器访问 `http://localhost:7860`
-3.  上传图片并选择是否启用归一化坐标模式
-4.  点击翻译按钮，等待结果
+```bash
+python app.py
+```
 
-#### 归一化坐标模式说明
-- **何时使用**: 当发现翻译结果中的文本位置不正确时，可能是因为API供应商压缩了图片分辨率
-- **如何启用**:
-  - 在Web界面中勾选"使用归一化坐标模式"选项
-  - 或在配置文件中设置 `normalize_coordinates = True`
-- **工作原理**: 将API返回的坐标值视为相对坐标(0-1范围)，然后按比例缩放到实际图片尺寸
+访问 `http://localhost:7860` 即可使用网页界面。
 
-## ⚠️ 注意事项与局限性
+#### 方式二：命令行批量处理
 
-- **API 依赖**: 本工具的性能和效果强依赖于你所选择的 VLM 模型。模型的识别精度、翻译质量和响应速度会直接影响最终结果。
-- **坐标精度**: VLM 返回的坐标可能不是 100% 精确，有时会导致译文覆盖位置有轻微偏差。
-- **坐标不匹配**: 某些API供应商会压缩图片分辨率，导致返回的坐标与原图不匹配。可以尝试启用归一化坐标模式解决这个问题。
-- **空间限制**: 如果原文区域过小，而译文过长，即使经过自动缩放和换行，文本也可能显得拥挤或超出边界。代码中的 `get_wrapped_text_and_font` 函数已尽力优化此问题。
-- **费用**: 使用商业 VLM API 可能会产生费用，请注意你的 API 服务商的计费规则。
+```bash
+# 将图片放入 input 文件夹后运行
+python LLMtranslator.py
+```
+
+处理后的图片将保存在 `output` 文件夹中。
+
+## 📁 项目结构
+
+```
+LLM-V-Trans/
+├── app.py                 # Gradio网页界面
+├── LLMtranslator.py       # 核心翻译模块
+├── config.ini.example     # 配置文件模板
+├── requirements.txt      # 依赖列表
+├── input/               # 输入图片目录（命令行模式）
+├── output/              # 输出图片目录（命令行模式）
+├── font/                # 字体文件目录
+└── README.md           # 说明文档
+```
+
+## ⚙️ 详细配置说明
+
+### API配置（Translator部分）
+
+- `api_key`: 必须设置，支持 SiliconFlow 等兼容 OpenAI API 的服务
+- `model_name`: 推荐使用支持视觉任务的模型，如 Qwen-VL 系列
+- `model_prompt`: 可自定义指令，但需保持JSON输出格式要求
+
+### 图像样式配置（Image部分）
+
+- `text_box_transparency`: 译文背景透明度（0-255）
+- `background_discoloration_strength`: 背景色调整强度
+- `background_sample_margin`: 背景色取样边距
+- `font_path`: 中文字体文件路径
+- `normalize_coordinates`: 归一化坐标模式开关
+
+## ⚠️ 注意事项
+
+1. **API密钥**: 使用前务必在 `config.ini` 中配置有效的 API 密钥
+2. **字体文件**: 确保 `font/font.ttf` 文件存在，否则使用系统默认字体
+3. **图片格式**: 支持 JPG、PNG、JPEG、BMP、GIF 等常见格式
+4. **网络连接**: 需要稳定的网络连接以调用 VLM API
+
+## 🔧 故障排除
+
+### 常见问题
+
+**Q: 运行时报错 "配置文件无法读取"**
+A: 确保 `config.ini` 文件存在于项目根目录
+
+**Q: 翻译失败，提示API密钥错误**
+A: 检查 `config.ini` 中的 `api_key` 是否已正确设置
+
+**Q: 网页界面无法访问**
+A: 检查 7860 端口是否被占用，或尝试修改 `app.py` 中的端口设置
+
+**Q: 译文显示异常**
+A: 检查字体文件是否存在，或调整 `config.ini` 中的字体大小相关参数
+
+## 📄 许可证
+
+本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
 
 ## 🙏 致谢
 
-- **Pillow (PIL Fork)**: 强大的图像处理库。
-- 本项目的设计和部分实现受到了 [python-image-translator](https://github.com/boysugi20/python-image-translator) by [boysugi20](https://github.com/boysugi20) 的启发，在此表示感谢。
+- **Pillow (PIL Fork)**: 强大的图像处理库
+- **Gradio**: 快速构建机器学习演示界面
+- 本项目的设计受到了 [python-image-translator](https://github.com/boysugi20/python-image-translator) 的启发
+
+---
+
+如有问题或建议，欢迎提交 Issue 或 Pull Request！
