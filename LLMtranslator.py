@@ -43,7 +43,7 @@ class VLTranslator:
             config (configparser.ConfigParser): 配置对象，用于读取API设置。
         """
         self.api_key = config.get('Translator', 'api_key')
-        self.api_base = config.get('Translator', 'api_base', fallback='https://api.siliconflow.cn').rstrip("/")
+        self.api_base = config.get('Translator', 'api_base').rstrip("/")
         self.model = config.get('Translator', 'model_name', fallback='Qwen/Qwen2.5-VL-32B-Instruct')
         self.model_prompt = config.get('Translator', 'model_prompt', fallback="""你是一个专业OCR引擎。严格按以下要求处理图像：
 1. 识别图中所有英文文字并翻译成中文输出
@@ -432,9 +432,15 @@ def get_text_fill_color(background_color: tuple) -> tuple:
     else:
         return (255, 255, 255, 255)
 
-def replace_text_with_translation(image: Image.Image, translated_data: list, config: configparser.ConfigParser) -> Image.Image:
+def replace_text_with_translation(image: Image.Image, translated_data: list, config: configparser.ConfigParser, normalize_coordinates: bool | None = None) -> Image.Image:
     """
     在原始图片上绘制翻译后的文本，并为文本创建半透明背景。
+    
+    Args:
+        image: 原始图片
+        translated_data: 翻译数据列表
+        config: 配置对象
+        normalize_coordinates: 是否强制使用归一化坐标，None时从配置文件读取
     """
     img_width, img_height = image.size
     
@@ -446,6 +452,12 @@ def replace_text_with_translation(image: Image.Image, translated_data: list, con
     discoloration_strength = config.getint('Image', 'background_discoloration_strength', fallback=40)
     background_margin = config.getint('Image', 'background_sample_margin', fallback=10)
     font_path = config.get('Image', 'font_path', fallback='font/font.ttf')
+    
+    # 读取归一化坐标配置
+    if normalize_coordinates is None:
+        normalize_coordinates = config.getboolean('Image', 'normalize_coordinates', fallback=False)
+    
+    log_debug(f"坐标模式: {'归一化坐标' if normalize_coordinates else '像素坐标'}")
 
     for item in translated_data:
         translated_text = item.get('text')
@@ -457,16 +469,28 @@ def replace_text_with_translation(image: Image.Image, translated_data: list, con
             log_warning(f"跳过无效边界框的条目: {item}")
             continue
 
-        if all(0 <= coord <= 1 for coord in box):
+        # 根据归一化模式设置处理坐标
+        if normalize_coordinates:
+            # 强制使用归一化坐标（0-1范围）
             x_min = int(box[0] * img_width)
             y_min = int(box[1] * img_height)
             x_max = int(box[2] * img_width)
             y_max = int(box[3] * img_height)
+            log_debug(f"归一化坐标转换: {box} -> 像素坐标: [{x_min}, {y_min}, {x_max}, {y_max}]")
+        elif all(0 <= coord <= 1 for coord in box):
+            # 自动检测到归一化坐标
+            x_min = int(box[0] * img_width)
+            y_min = int(box[1] * img_height)
+            x_max = int(box[2] * img_width)
+            y_max = int(box[3] * img_height)
+            log_debug(f"自动检测归一化坐标: {box} -> 像素坐标: [{x_min}, {y_min}, {x_max}, {y_max}]")
         else:
+            # 使用像素坐标
             x_min = int(box[0])
             y_min = int(box[1])
             x_max = int(box[2])
             y_max = int(box[3])
+            log_debug(f"使用像素坐标: {box}")
 
         x_min = max(0, min(x_min, img_width))
         y_min = max(0, min(y_min, img_height))
@@ -592,7 +616,7 @@ def main():
     log_info("\n所有图片处理完成。")
 
 
-def process_image_translation(image_input, config_path='config.ini'):
+def process_image_translation(image_input, config_path='config.ini', normalize_coordinates=None):
     """
     图片翻译处理对外接口函数
     
@@ -603,12 +627,14 @@ def process_image_translation(image_input, config_path='config.ini'):
        - 传入图片路径：result = process_image_translation('path/to/image.jpg')
        - 传入PIL图片对象：result = process_image_translation(pil_image)
        - 指定配置文件：result = process_image_translation('image.jpg', 'custom_config.ini')
+       - 强制使用归一化坐标：result = process_image_translation('image.jpg', normalize_coordinates=True)
     
     Args:
         image_input (str | PIL.Image.Image): 图片输入，可以是：
             - 图片文件路径字符串 (如: 'image.jpg')
             - PIL.Image.Image对象
         config_path (str, optional): 配置文件路径，默认为 'config.ini'
+        normalize_coordinates (bool, optional): 是否强制使用归一化坐标模式，None时从配置文件读取
     
     Returns:
         dict: 处理结果字典，包含以下键值：
@@ -634,6 +660,9 @@ def process_image_translation(image_input, config_path='config.ini'):
         
         # 方式3：自定义配置文件
         result = process_image_translation('test.jpg', 'my_config.ini')
+        
+        # 方式4：强制使用归一化坐标
+        result = process_image_translation('test.jpg', normalize_coordinates=True)
     """
     
     # 初始化返回结果
@@ -705,7 +734,7 @@ def process_image_translation(image_input, config_path='config.ini'):
             return result
         
         # 在图片上绘制翻译结果
-        processed_image = replace_text_with_translation(original_image, translated_data, config)
+        processed_image = replace_text_with_translation(original_image, translated_data, config, normalize_coordinates)
         
         # 成功处理
         result['success'] = True

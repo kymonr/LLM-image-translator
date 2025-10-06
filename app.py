@@ -3,13 +3,14 @@ from PIL import Image
 import os
 from LLMtranslator import process_image_translation
 
-def translate_image(image_input, config_path="config.ini"):
+def translate_image(image_input, config_path="config.ini", normalize_coordinates=False):
     """
     Gradio界面的图片翻译函数
     
     Args:
         image_input: Gradio上传的图片文件
         config_path: 配置文件路径
+        normalize_coordinates: 是否使用归一化坐标模式
     
     Returns:
         tuple: (翻译后的图片, 状态消息, 检测到的文字信息)
@@ -28,7 +29,7 @@ def translate_image(image_input, config_path="config.ini"):
             pil_image = image_input
         
         # 调用翻译函数
-        result = process_image_translation(pil_image, config_path)
+        result = process_image_translation(pil_image, config_path, normalize_coordinates)
         
         if result['success']:
             # 成功处理
@@ -78,6 +79,12 @@ def main():
                     placeholder="输入配置文件路径，默认为 config.ini"
                 )
                 
+                normalize_checkbox = gr.Checkbox(
+                    label="使用归一化坐标模式",
+                    value=False,
+                    info="启用后，将强制使用归一化坐标(0-1范围)处理文本位置，适用于某些压缩图片分辨率的API供应商"
+                )
+                
                 translate_btn = gr.Button(
                     "🔄 开始翻译",
                     variant="primary",
@@ -109,16 +116,20 @@ def main():
         gr.Markdown("""
         1. **上传图片**: 点击上传区域选择包含文字的图片
         2. **配置文件**: 确保 `config.ini` 存在并包含必要的API配置
-        3. **开始翻译**: 点击翻译按钮开始处理
-        4. **查看结果**: 翻译完成后可以查看结果和检测信息
+        3. **归一化坐标**: 如果翻译结果位置不正确，请尝试启用此选项
+        4. **开始翻译**: 点击翻译按钮开始处理
+        5. **查看结果**: 翻译完成后可以查看结果和检测信息
         
         **支持的图片格式**: JPG, PNG, JPEG, BMP, GIF 等
+        
+        **归一化坐标说明**: 某些API供应商会压缩图片分辨率，导致返回的坐标与原图不匹配。
+        启用归一化坐标模式可以解决这个问题，将坐标按比例缩放到正确的位置。
         """)
         
         # 绑定事件
         translate_btn.click(
             fn=translate_image,
-            inputs=[image_input, config_input],
+            inputs=[image_input, config_input, normalize_checkbox],
             outputs=[image_output, status_output, text_info_output]
         )
     
