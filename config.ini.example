@@ -2,8 +2,10 @@
 api_key = sk-ldmootlqntqalzprsinlrhxxfnecniscswnkdgickusyidri
 api_base = https://api.siliconflow.cn
 model_name = Qwen/Qwen2.5-VL-32B-Instruct
-; 模型提示词。
+; 模型提示词（像素坐标模式）
 model_prompt = 你是一个专业OCR引擎。严格按以下要求处理图像：1. 识别图中所有英文文字并翻译成中文输出2. 为每个文字区域输出检测框坐标3. 输出格式：每行一个JSON对象{"text": "译文", "box": [x_min, y_min, x_max, y_max]}请仔细识别图片中的外语，准确翻译并提供精确的边界框像素化坐标。只许回复json对象，不要注释
+; 模型提示词（归一化坐标模式）
+model_prompt_normalized = 你是一个专业OCR引擎。严格按以下要求处理图像：1. 识别图中所有英文文字并翻译成中文输出2. 为每个文字区域输出检测框坐标（使用归一化坐标，范围0-1）3. 输出格式：每行一个JSON对象{"text": "译文", "box": [x_min, y_min, x_max, y_max]}请仔细识别图片中的外语，准确翻译并提供归一化坐标（0-1范围）。只许回复json对象，不要注释
 
 [Image]
 # 译文背景的透明度 (0-255, 0为全透明, 255为不透明)

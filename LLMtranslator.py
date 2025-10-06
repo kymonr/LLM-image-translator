@@ -35,28 +35,45 @@ class VLTranslator:
     """
     视觉语言翻译器类，封装了与SiliconFlow VL模型交互的逻辑。
     """
-    def __init__(self, config: configparser.ConfigParser):
+    def __init__(self, config: configparser.ConfigParser, normalize_coordinates: bool = False):
         """
         初始化VLTranslator实例。
 
         Args:
             config (configparser.ConfigParser): 配置对象，用于读取API设置。
+            normalize_coordinates (bool): 是否使用归一化坐标模式
         """
         self.api_key = config.get('Translator', 'api_key')
         self.api_base = config.get('Translator', 'api_base').rstrip("/")
         self.model = config.get('Translator', 'model_name', fallback='Qwen/Qwen2.5-VL-32B-Instruct')
-        self.model_prompt = config.get('Translator', 'model_prompt', fallback="""你是一个专业OCR引擎。严格按以下要求处理图像：
+        self.normalize_coordinates = normalize_coordinates
+        
+        # 根据坐标模式选择不同的提示词
+        if normalize_coordinates:
+            self.model_prompt = config.get('Translator', 'model_prompt_normalized', fallback="""你是一个专业OCR引擎。严格按以下要求处理图像：
+1. 识别图中所有英文文字并翻译成中文输出
+2. 为每个文字区域输出检测框坐标（使用归一化坐标，范围0-1）
+3. 输出格式：每行一个JSON对象
+{
+  "text": "译文",
+  "box": [x_min, y_min, x_max, y_max]
+}
+
+请仔细识别图片中的外语，准确翻译并提供归一化坐标（0-1范围）。只许回复json对象，不要注释""")
+        else:
+            self.model_prompt = config.get('Translator', 'model_prompt', fallback="""你是一个专业OCR引擎。严格按以下要求处理图像：
 1. 识别图中所有英文文字并翻译成中文输出
 2. 为每个文字区域输出检测框坐标
 3. 输出格式：每行一个JSON对象
 {
-  "text": "译文", 
+  "text": "译文",
   "box": [x_min, y_min, x_max, y_max]
 }
 
 请仔细识别图片中的外语，准确翻译并提供精确的边界框像素化坐标。只许回复json对象，不要注释""")
+        
         log_info("VLTranslator初始化完成。")
-        log_debug(f"API Base: {self.api_base}, Model: {self.model}")
+        log_debug(f"API Base: {self.api_base}, Model: {self.model}, 坐标模式: {'归一化' if normalize_coordinates else '像素'}")
 
     def image_to_base64(self, image_path: str) -> str:
         """
@@ -112,11 +129,11 @@ class VLTranslator:
             raise
         except requests.exceptions.RequestException as e:
             log_error(f"API请求失败: {e}")
-            if response is not None:
-                log_error(f"HTTP状态码: {response.status_code}, 响应: {response.text}")
+            if hasattr(e, 'response') and e.response is not None:
+                log_error(f"HTTP状态码: {e.response.status_code}, 响应: {e.response.text}")
             raise
         except json.JSONDecodeError as e:
-            log_error(f"解析API响应JSON失败: {e}, 响应内容: {response.text if response else '无'}")
+            log_error(f"解析API响应JSON失败: {e}")
             raise
         except Exception as e:
             log_error(f"OCR和翻译过程中发生未知错误: {e}")
@@ -203,7 +220,7 @@ def get_wrapped_text_and_font_by_area(text: str, width: int, height: int, font_p
         ImageFont.truetype(font_path, size=10)
     except OSError:
         log_warning(f"字体文件 '{font_path}' 未找到或损坏，使用PIL默认字体。")
-        font_path = None
+        font_path = ""
 
     # 计算文本背景总面积
     total_area = width * height
@@ -394,7 +411,7 @@ def add_discoloration(color: tuple, strength: int) -> tuple:
 
     return (r, g, b)
 
-def get_background_color(image: Image.Image, x_min: int, y_min: int, x_max: int, y_max: int, margin: int) -> tuple:
+def get_background_color(image: Image.Image, x_min: int, y_min: int, x_max: int, y_max: int, margin: int) -> tuple[int, int, int]:
     """
     从图片指定区域的边缘获取背景颜色。
     """
@@ -415,7 +432,11 @@ def get_background_color(image: Image.Image, x_min: int, y_min: int, x_max: int,
         return (128, 128, 128) # 默认返回一个中性灰色
 
     background_color = max(edge_colors, key=lambda x: x[0])[1]
-    return background_color
+    # 确保返回的是三元组
+    if isinstance(background_color, tuple) and len(background_color) == 3:
+        return background_color
+    else:
+        return (128, 128, 128) # 如果颜色格式异常，返回默认灰色
 
 def get_text_fill_color(background_color: tuple) -> tuple:
     """
@@ -471,26 +492,36 @@ def replace_text_with_translation(image: Image.Image, translated_data: list, con
 
         # 根据归一化模式设置处理坐标
         if normalize_coordinates:
-            # 强制使用归一化坐标（0-1范围）
-            x_min = int(box[0] * img_width)
-            y_min = int(box[1] * img_height)
-            x_max = int(box[2] * img_width)
-            y_max = int(box[3] * img_height)
-            log_debug(f"归一化坐标转换: {box} -> 像素坐标: [{x_min}, {y_min}, {x_max}, {y_max}]")
-        elif all(0 <= coord <= 1 for coord in box):
-            # 自动检测到归一化坐标
-            x_min = int(box[0] * img_width)
-            y_min = int(box[1] * img_height)
-            x_max = int(box[2] * img_width)
-            y_max = int(box[3] * img_height)
-            log_debug(f"自动检测归一化坐标: {box} -> 像素坐标: [{x_min}, {y_min}, {x_max}, {y_max}]")
+            # 归一化模式下，坐标应该在0-1范围内
+            if all(0 <= coord <= 1 for coord in box):
+                x_min = int(box[0] * img_width)
+                y_min = int(box[1] * img_height)
+                x_max = int(box[2] * img_width)
+                y_max = int(box[3] * img_height)
+                log_debug(f"归一化坐标转换: {box} -> 像素坐标: [{x_min}, {y_min}, {x_max}, {y_max}]")
+            else:
+                # 如果坐标不在0-1范围内，可能是像素坐标，直接使用
+                log_warning(f"归一化模式下检测到非归一化坐标: {box}，尝试直接使用")
+                x_min = int(box[0])
+                y_min = int(box[1])
+                x_max = int(box[2])
+                y_max = int(box[3])
         else:
-            # 使用像素坐标
-            x_min = int(box[0])
-            y_min = int(box[1])
-            x_max = int(box[2])
-            y_max = int(box[3])
-            log_debug(f"使用像素坐标: {box}")
+            # 像素坐标模式
+            if all(0 <= coord <= 1 for coord in box):
+                # 自动检测到归一化坐标，转换为像素坐标
+                x_min = int(box[0] * img_width)
+                y_min = int(box[1] * img_height)
+                x_max = int(box[2] * img_width)
+                y_max = int(box[3] * img_height)
+                log_debug(f"自动检测归一化坐标: {box} -> 像素坐标: [{x_min}, {y_min}, {x_max}, {y_max}]")
+            else:
+                # 使用像素坐标
+                x_min = int(box[0])
+                y_min = int(box[1])
+                x_max = int(box[2])
+                y_max = int(box[3])
+                log_debug(f"使用像素坐标: {box}")
 
         x_min = max(0, min(x_min, img_width))
         y_min = max(0, min(y_min, img_height))
@@ -564,7 +595,9 @@ def main():
     if config.get('Translator', 'api_key') == 'None':
         raise ValueError("请填写好你的api密钥")
     
-    translator = VLTranslator(config)
+    # 读取归一化坐标配置
+    normalize_coordinates = config.getboolean('Image', 'normalize_coordinates', fallback=False)
+    translator = VLTranslator(config, normalize_coordinates)
 
     input_folder = "input"
     output_folder = "output"
@@ -713,8 +746,12 @@ def process_image_translation(image_input, config_path='config.ini', normalize_c
             result['message'] = "输入类型错误"
             return result
         
+        # 读取归一化坐标配置
+        if normalize_coordinates is None:
+            normalize_coordinates = config.getboolean('Image', 'normalize_coordinates', fallback=False)
+        
         # 初始化翻译器
-        translator = VLTranslator(config)
+        translator = VLTranslator(config, normalize_coordinates)
         
         # 进行OCR识别和翻译
         translated_data = translator.ocr_and_translate(image_path_for_api)
