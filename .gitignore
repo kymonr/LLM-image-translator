@@ -2,6 +2,8 @@
 Old
 # 用户字体文件
 font/*
+# 待开发模块
+comic_translator_LLM
 
 # 配置文件
 config.ini
