@@ -2,7 +2,7 @@
 
 [简体中文](./README.md) | [English](./README_en.md)
 
-一个功能强大的本地图像翻译工具，提供**命令行**和**网页界面**两种使用方式。利用先进的视觉语言模型（VLM）实现对图片内文字的精准识别、翻译和无缝替换。告别传统OCR+翻译的繁琐流程，VLM一步到位，效果更佳。
+一个功能强大的本地图像翻译工具，提供**命令行**、**网页界面**和**独立窗口应用**三种使用方式。利用先进的视觉语言模型（VLM）实现对图片内文字的精准识别、翻译和无缝替换。告别传统OCR+翻译的繁琐流程，VLM一步到位，效果更佳。
 
 | 原图 | 翻译结果 |
 |------|----------|
@@ -16,7 +16,9 @@
 - **📐 归一化坐标**: 支持归一化坐标模式，解决部分API供应商压缩图片分辨率导致坐标不匹配的问题。
 - **⚙️ 高度可配置**: 所有关键参数（API密钥、模型、Prompt、字体、样式等）均可通过 `config.ini` 文件轻松配置，无需修改代码。
 - **🗣️ 清晰日志**: 使用彩色日志输出，清晰展示程序运行的每一个步骤，便于调试和追踪。
-- **🖥️ 双模使用**: 支持命令行批量处理和网页界面单张处理两种使用方式。
+- **🖥️ 三模使用**: 支持命令行批量处理、网页界面单张处理和独立窗口应用三种使用方式。
+- **🎯 现代化界面**: NiceGUI版本提供原生窗口体验，支持实时预览、键盘快捷键和响应式设计。
+- **⚡ 异步处理**: 非阻塞的翻译任务处理，保持界面响应流畅。
 
 ## 📖 工作流程
 
@@ -35,8 +37,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-username/LLM-V-Trans.git
-cd LLM-V-Trans
+git clone https://github.com/jedzqer/LLM-image-translator.git
+cd LLM-image-translator
 ```
 
 ### 2. 进行配置
@@ -87,7 +89,24 @@ normalize_coordinates = False
 
 ### 3. 使用方式
 
-#### 方式一：网页界面（推荐用于单张图片处理）
+#### 方式一：独立窗口应用（推荐用于单张图片处理）
+
+```bash
+# 安装依赖
+pip install -r requirements.txt
+
+# 运行应用
+python run_nicegui_app.py
+```
+
+**特性**:
+- 独立窗口应用，提供原生窗口体验
+- 左侧控制面板 + 右侧图片预览的现代化布局
+- 实时预览原图和翻译结果，支持标签切换
+- 键盘快捷键支持：Ctrl+T翻译、Ctrl+R重置、Ctrl+S保存
+- 异步处理，保持界面响应流畅
+
+#### 方式二：网页界面
 
 ```bash
 python app.py
@@ -95,7 +114,7 @@ python app.py
 
 访问 `http://localhost:7860` 即可使用网页界面。
 
-#### 方式二：命令行批量处理
+#### 方式三：命令行批量处理
 
 ```bash
 # 将图片放入 input 文件夹后运行
@@ -107,15 +126,18 @@ python LLMtranslator.py
 ## 📁 项目结构
 
 ```
-LLM-V-Trans/
+LLM-image-translator/
 ├── app.py                 # Gradio网页界面
+├── nicegui_app.py         # NiceGUI主应用文件
+├── run_nicegui_app.py     # NiceGUI启动脚本
 ├── LLMtranslator.py       # 核心翻译模块
 ├── config.ini.example     # 配置文件模板
-├── requirements.txt      # 依赖列表
-├── input/               # 输入图片目录（命令行模式）
-├── output/              # 输出图片目录（命令行模式）
-├── font/                # 字体文件目录
-└── README.md           # 说明文档
+├── requirements.txt       # 依赖列表
+├── README.md             # 说明文档
+├── README_en.md          # 英文说明文档
+├── input/                # 输入图片目录（命令行模式）
+├── output/               # 输出图片目录
+└── font/                 # 字体文件目录
 ```
 
 ## ⚙️ 详细配置说明
@@ -133,6 +155,29 @@ LLM-V-Trans/
 - `background_sample_margin`: 背景色取样边距
 - `font_path`: 中文字体文件路径
 - `normalize_coordinates`: 归一化坐标模式开关
+
+## 🎯 使用指南
+
+### 基本操作流程（NiceGUI版本）
+
+1. **上传图片**: 点击"选择或拖拽图片文件"上传包含文字的图片
+2. **检查配置**: 确认配置文件路径正确，API密钥已设置
+3. **选择模式**: 根据需要选择是否启用归一化坐标模式
+4. **开始翻译**: 点击"开始翻译"按钮或使用快捷键 Ctrl+T 启动翻译过程
+5. **查看结果**: 在右侧标签页中切换查看原图和翻译结果
+6. **保存结果**: 点击"保存结果"或使用快捷键 Ctrl+S 将翻译后的图片保存到output文件夹
+
+### 键盘快捷键（NiceGUI版本）
+
+- **Ctrl + T**: 开始翻译（需要已上传图片）
+- **Ctrl + R**: 重置应用状态
+- **Ctrl + S**: 保存翻译结果（需要翻译完成）
+
+### 归一化坐标模式
+
+- **启用时机**: 当翻译结果位置不正确时
+- **适用场景**: 某些API供应商会压缩图片分辨率，导致坐标不匹配
+- **效果**: 将坐标按比例缩放到正确位置
 
 ## ⚠️ 注意事项
 
@@ -157,6 +202,46 @@ A: 检查 7860 端口是否被占用，或尝试修改 `app.py` 中的端口设�
 **Q: 译文显示异常**
 A: 检查字体文件是否存在，或调整 `config.ini` 中的字体大小相关参数
 
+**Q: 翻译位置不准确**
+A: 启用归一化坐标模式
+
+**Q: 快捷键不生效（NiceGUI版本）**
+A: 确保应用窗口处于激活状态，快捷键仅在应用窗口内有效
+
+**Q: 依赖安装失败**
+A: 使用 `pip install -r requirements.txt` 安装所有依赖
+
+### 日志查看
+
+应用会在控制台输出详细的处理日志，包括:
+- 配置加载状态
+- 图片处理进度
+- API调用结果
+- 错误信息
+
+## 🛠️ 开发说明
+
+### 技术栈
+
+- **前端框架**: NiceGUI (基于Vue.js) / Gradio
+- **后端语言**: Python 3.8+
+- **图片处理**: Pillow (PIL)
+- **API调用**: requests
+- **配置管理**: configparser
+- **样式框架**: Tailwind CSS (通过NiceGUI集成)
+
+### 核心模块
+
+应用基于 `LLMtranslator.py` 模块，通过 `process_image_translation` 函数进行集成。
+
+### 扩展开发
+
+如需添加新功能，可以:
+1. 在 `ImageTranslatorApp` 类中添加新方法
+2. 在 `setup_ui` 方法中添加界面组件
+3. 使用Tailwind CSS类优化样式设计
+4. 添加新的键盘快捷键支持
+
 ## 更新计划
 
 - 后续将加入对Qwen-MT-Image的支持。
@@ -170,6 +255,7 @@ A: 检查字体文件是否存在，或调整 `config.ini` 中的字体大小相
 
 - **Pillow (PIL Fork)**: 强大的图像处理库
 - **Gradio**: 快速构建机器学习演示界面
+- **NiceGUI**: 现代化的Python GUI框架
 - 本项目的设计受到了 [python-image-translator](https://github.com/boysugi20/python-image-translator) 的启发
 
 ---
