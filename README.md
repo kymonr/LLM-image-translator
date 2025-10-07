@@ -39,6 +39,8 @@
 # 克隆仓库
 git clone https://github.com/jedzqer/LLM-image-translator.git
 cd LLM-image-translator
+# 安装依赖
+pip install -r requirements.txt
 ```
 
 ### 2. 进行配置
@@ -92,9 +94,6 @@ normalize_coordinates = False
 #### 方式一：独立窗口应用（推荐用于单张图片处理）
 
 ```bash
-# 安装依赖
-pip install -r requirements.txt
-
 # 运行应用
 python run_nicegui_app.py
 ```
@@ -106,7 +105,7 @@ python run_nicegui_app.py
 - 键盘快捷键支持：Ctrl+T翻译、Ctrl+R重置、Ctrl+S保存
 - 异步处理，保持界面响应流畅
 
-#### 方式二：网页界面
+#### 方式二：网页界面（计划逐步淘汰）
 
 ```bash
 python app.py
@@ -114,7 +113,7 @@ python app.py
 
 访问 `http://localhost:7860` 即可使用网页界面。
 
-#### 方式三：命令行批量处理
+#### 方式三：命令行批量处理（计划逐步淘汰）
 
 ```bash
 # 将图片放入 input 文件夹后运行
@@ -208,9 +207,6 @@ A: 启用归一化坐标模式
 **Q: 快捷键不生效（NiceGUI版本）**
 A: 确保应用窗口处于激活状态，快捷键仅在应用窗口内有效
 
-**Q: 依赖安装失败**
-A: 使用 `pip install -r requirements.txt` 安装所有依赖
-
 ### 日志查看
 
 应用会在控制台输出详细的处理日志，包括:
@@ -224,7 +220,7 @@ A: 使用 `pip install -r requirements.txt` 安装所有依赖
 ### 技术栈
 
 - **前端框架**: NiceGUI (基于Vue.js) / Gradio
-- **后端语言**: Python 3.8+
+- **后端语言**: Python 3.9+
 - **图片处理**: Pillow (PIL)
 - **API调用**: requests
 - **配置管理**: configparser
@@ -233,14 +229,6 @@ A: 使用 `pip install -r requirements.txt` 安装所有依赖
 ### 核心模块
 
 应用基于 `LLMtranslator.py` 模块，通过 `process_image_translation` 函数进行集成。
-
-### 扩展开发
-
-如需添加新功能，可以:
-1. 在 `ImageTranslatorApp` 类中添加新方法
-2. 在 `setup_ui` 方法中添加界面组件
-3. 使用Tailwind CSS类优化样式设计
-4. 添加新的键盘快捷键支持
 
 ## 更新计划
 
