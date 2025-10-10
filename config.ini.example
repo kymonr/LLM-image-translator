@@ -9,7 +9,7 @@ model_prompt_normalized = 你是一个专业OCR引擎。严格按以下要求处
 
 [Image]
 # 译文背景的透明度 (0-255, 0为全透明, 255为不透明)
-text_box_transparency = 180
+text_box_transparency = 255
 # 背景色取样后，对其进行的颜色调整强度（数值越大，与原背景色差异越大）
 background_discoloration_strength = 40
 # 从文本框边缘向外扩展多少像素来取样背景色

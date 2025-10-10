@@ -93,7 +93,7 @@ class ImageTranslatorApp:
             with ui.row().classes('w-full justify-center items-center'):
                 with ui.row().classes('items-center gap-3'):
                     ui.icon('translate', size='lg').classes('text-white')
-                    ui.label('🌍 LLM图片翻译工具').classes('text-2xl font-bold tracking-tight')
+                    ui.label('LLM图片翻译工具').classes('text-2xl font-bold tracking-tight')
         
         # 主内容区域 - 左右排布布局
         with ui.row().classes('w-full h-[calc(100vh-80px)] bg-gray-50'):
@@ -106,8 +106,30 @@ class ImageTranslatorApp:
                 self.setup_image_comparison()
     
     def setup_control_panel(self):
-        """设置左侧控制面板"""
+        """设置左侧控制面板 - 使用选项卡分组"""
         
+        # 创建选项卡容器
+        with ui.tabs().classes('w-full mb-4') as self.tabs:
+            ui.tab('单张处理', icon='image').classes('text-sm font-medium')
+            ui.tab('翻译配置', icon='settings').classes('text-sm font-medium')
+            ui.tab('批量处理', icon='folder').classes('text-sm font-medium')
+        
+        # 选项卡内容区域
+        with ui.tab_panels(self.tabs, value='单张处理').classes('w-full flex-1'):
+            # 单张处理选项卡
+            with ui.tab_panel('单张处理'):
+                self.setup_single_image_ui()
+            
+            # 翻译配置选项卡
+            with ui.tab_panel('翻译配置'):
+                self.setup_translation_config_ui()
+            
+            # 批量处理选项卡
+            with ui.tab_panel('批量处理'):
+                self.setup_batch_processing_ui()
+    
+    def setup_single_image_ui(self):
+        """设置单张图片处理界面"""
         # 图片上传区域 - 优化视觉设计
         with ui.card().classes('w-full mb-4 shadow-md border-0 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50'):
             with ui.row().classes('items-center gap-2 mb-3'):
@@ -157,96 +179,6 @@ class ImageTranslatorApp:
             
             # 快捷键提示
             ui.label('快捷键: Ctrl+T (翻译) | Ctrl+R (重置) | Ctrl+S (保存)').classes('text-xs text-gray-500 mt-2 text-center')
-        
-        # 翻译器配置区域
-        with ui.card().classes('w-full mb-4 shadow-md border-0 rounded-xl bg-white'):
-            with ui.row().classes('items-center gap-2 mb-3'):
-                ui.icon('translate', color='primary', size='sm')
-                ui.label('翻译器配置').classes('text-lg font-bold text-gray-800')
-            
-            # API密钥设置
-            with ui.row().classes('w-full items-center mb-3'):
-                ui.label('API密钥:').classes('w-24 font-medium text-gray-700')
-                self.api_key_input = ui.input(
-                    value=self.config.get('Translator', 'api_key', fallback=''),
-                    on_change=lambda e: self.update_translator_config('api_key', e.value)
-                ).props('dense outlined type=password').classes('flex-1 bg-gray-50')
-            
-            # API基础地址
-            with ui.row().classes('w-full items-center mb-3'):
-                ui.label('API地址:').classes('w-24 font-medium text-gray-700')
-                self.api_base_input = ui.input(
-                    value=self.config.get('Translator', 'api_base', fallback=''),
-                    on_change=lambda e: self.update_translator_config('api_base', e.value)
-                ).props('dense outlined').classes('flex-1 bg-gray-50')
-            
-            # 模型名称
-            with ui.row().classes('w-full items-center mb-3'):
-                ui.label('模型名称:').classes('w-24 font-medium text-gray-700')
-                self.model_name_input = ui.input(
-                    value=self.config.get('Translator', 'model_name', fallback=''),
-                    on_change=lambda e: self.update_translator_config('model_name', e.value)
-                ).props('dense outlined').classes('flex-1 bg-gray-50')
-        
-        # 图片处理配置区域
-        with ui.card().classes('w-full mb-4 shadow-md border-0 rounded-xl bg-white'):
-            with ui.row().classes('items-center gap-2 mb-3'):
-                ui.icon('image', color='primary', size='sm')
-                ui.label('图片处理配置').classes('text-lg font-bold text-gray-800')
-            
-            # 文本框透明度
-            with ui.row().classes('w-full items-center mb-3'):
-                ui.label('文本框透明度:').classes('w-32 font-medium text-gray-700')
-                self.transparency_input = ui.number(
-                    value=int(self.config.get('Image', 'text_box_transparency', fallback=180)),
-                    min=0,
-                    max=255,
-                    on_change=lambda e: self.update_image_config('text_box_transparency', str(int(e.value)))
-                ).props('dense outlined').classes('flex-1 bg-gray-50')
-            
-            # 背景褪色强度
-            with ui.row().classes('w-full items-center mb-3'):
-                ui.label('背景褪色强度:').classes('w-32 font-medium text-gray-700')
-                self.discoloration_input = ui.number(
-                    value=int(self.config.get('Image', 'background_discoloration_strength', fallback=40)),
-                    min=0,
-                    max=100,
-                    on_change=lambda e: self.update_image_config('background_discoloration_strength', str(int(e.value)))
-                ).props('dense outlined').classes('flex-1 bg-gray-50')
-            
-            # 背景采样边距
-            with ui.row().classes('w-full items-center mb-3'):
-                ui.label('采样边距:').classes('w-32 font-medium text-gray-700')
-                self.margin_input = ui.number(
-                    value=int(self.config.get('Image', 'background_sample_margin', fallback=10)),
-                    min=0,
-                    max=50,
-                    on_change=lambda e: self.update_image_config('background_sample_margin', str(int(e.value)))
-                ).props('dense outlined').classes('flex-1 bg-gray-50')
-            
-            # 字体路径
-            with ui.row().classes('w-full items-center mb-3'):
-                ui.label('字体路径:').classes('w-32 font-medium text-gray-700')
-                self.font_path_input = ui.input(
-                    value=self.config.get('Image', 'font_path', fallback='font/font.ttf'),
-                    on_change=lambda e: self.update_image_config('font_path', e.value)
-                ).props('dense outlined').classes('flex-1 bg-gray-50')
-            
-            # 归一化坐标模式
-            with ui.row().classes('w-full items-center mb-2'):
-                self.normalize_checkbox = ui.checkbox(
-                    '使用归一化坐标模式',
-                    value=self.config.getboolean('Image', 'normalize_coordinates', fallback=False),
-                    on_change=lambda e: self.update_image_config('normalize_coordinates', str(e.value).lower())
-                ).classes('flex-1')
-                ui.tooltip('适用于某些压缩图片分辨率的API供应商').classes('text-xs')
-            
-            # 配置状态显示 - 优化视觉反馈
-            with ui.row().classes('w-full items-center'):
-                config_status = '✅ 配置有效' if self.app_state['config_valid'] else '❌ 配置无效'
-                api_status = '✅ API密钥已设置' if self.app_state['api_key_set'] else '❌ API密钥未设置'
-                status_color = 'bg-green-100 text-green-800' if self.app_state['config_valid'] and self.app_state['api_key_set'] else 'bg-red-100 text-red-800'
-                ui.label(f'{config_status} | {api_status}').classes(f'text-sm px-3 py-2 rounded-lg {status_color} font-medium')
         
         # 状态显示区域 - 优化信息展示
         with ui.card().classes('w-full shadow-md border-0 rounded-xl bg-white'):
@@ -362,6 +294,104 @@ class ImageTranslatorApp:
         self.load_config()  # 重新加载配置以更新状态
         ui.notify(f'翻译器配置已更新: {key}', type='positive')
     
+    def setup_translation_config_ui(self):
+        """设置翻译配置界面"""
+        # 翻译器配置区域
+        with ui.card().classes('w-full mb-4 shadow-md border-0 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50'):
+            with ui.row().classes('items-center gap-2 mb-3'):
+                ui.icon('translate', color='primary', size='sm')
+                ui.label('翻译器配置').classes('text-lg font-bold text-gray-800')
+            
+            # API密钥设置
+            with ui.row().classes('w-full items-center mb-3'):
+                ui.label('API密钥:').classes('w-24 font-medium text-gray-700')
+                self.api_key_input = ui.input(
+                    value=self.config.get('Translator', 'api_key', fallback=''),
+                    on_change=lambda e: self.update_translator_config('api_key', e.value)
+                ).props('dense outlined type=password').classes('flex-1 bg-gray-50')
+            
+            # API基础地址
+            with ui.row().classes('w-full items-center mb-3'):
+                ui.label('API地址:').classes('w-24 font-medium text-gray-700')
+                self.api_base_input = ui.input(
+                    value=self.config.get('Translator', 'api_base', fallback=''),
+                    on_change=lambda e: self.update_translator_config('api_base', e.value)
+                ).props('dense outlined').classes('flex-1 bg-gray-50')
+            
+            # 模型名称
+            with ui.row().classes('w-full items-center mb-3'):
+                ui.label('模型名称:').classes('w-24 font-medium text-gray-700')
+                self.model_name_input = ui.input(
+                    value=self.config.get('Translator', 'model_name', fallback=''),
+                    on_change=lambda e: self.update_translator_config('model_name', e.value)
+                ).props('dense outlined').classes('flex-1 bg-gray-50')
+        
+        # 图片处理配置区域
+        with ui.card().classes('w-full mb-4 shadow-md border-0 rounded-xl bg-gradient-to-br from-orange-50 to-yellow-50'):
+            with ui.row().classes('items-center gap-2 mb-3'):
+                ui.icon('image', color='primary', size='sm')
+                ui.label('图片处理配置').classes('text-lg font-bold text-gray-800')
+            
+            # 文本框透明度
+            with ui.row().classes('w-full items-center mb-3'):
+                ui.label('文本框透明度:').classes('w-32 font-medium text-gray-700')
+                self.transparency_input = ui.number(
+                    value=int(self.config.get('Image', 'text_box_transparency', fallback=180)),
+                    min=0,
+                    max=255,
+                    on_change=lambda e: self.update_image_config('text_box_transparency', str(int(e.value)))
+                ).props('dense outlined').classes('flex-1 bg-gray-50')
+            
+            # 背景褪色强度
+            with ui.row().classes('w-full items-center mb-3'):
+                ui.label('背景褪色强度:').classes('w-32 font-medium text-gray-700')
+                self.discoloration_input = ui.number(
+                    value=int(self.config.get('Image', 'background_discoloration_strength', fallback=40)),
+                    min=0,
+                    max=100,
+                    on_change=lambda e: self.update_image_config('background_discoloration_strength', str(int(e.value)))
+                ).props('dense outlined').classes('flex-1 bg-gray-50')
+            
+            # 背景采样边距
+            with ui.row().classes('w-full items-center mb-3'):
+                ui.label('采样边距:').classes('w-32 font-medium text-gray-700')
+                self.margin_input = ui.number(
+                    value=int(self.config.get('Image', 'background_sample_margin', fallback=10)),
+                    min=0,
+                    max=50,
+                    on_change=lambda e: self.update_image_config('background_sample_margin', str(int(e.value)))
+                ).props('dense outlined').classes('flex-1 bg-gray-50')
+            
+            # 字体路径
+            with ui.row().classes('w-full items-center mb-3'):
+                ui.label('字体路径:').classes('w-32 font-medium text-gray-700')
+                self.font_path_input = ui.input(
+                    value=self.config.get('Image', 'font_path', fallback='font/font.ttf'),
+                    on_change=lambda e: self.update_image_config('font_path', e.value)
+                ).props('dense outlined').classes('flex-1 bg-gray-50')
+            
+            # 归一化坐标模式
+            with ui.row().classes('w-full items-center mb-2'):
+                self.normalize_checkbox = ui.checkbox(
+                    '使用归一化坐标模式',
+                    value=self.config.getboolean('Image', 'normalize_coordinates', fallback=False),
+                    on_change=lambda e: self.update_image_config('normalize_coordinates', str(e.value).lower())
+                ).classes('flex-1')
+                ui.tooltip('适用于某些压缩图片分辨率的API供应商').classes('text-xs')
+        
+        # 配置状态显示区域
+        with ui.card().classes('w-full shadow-md border-0 rounded-xl bg-white'):
+            with ui.row().classes('items-center gap-2 mb-3'):
+                ui.icon('check_circle', color='primary', size='sm')
+                ui.label('配置状态').classes('text-lg font-bold text-gray-800')
+            
+            # 配置状态显示 - 优化视觉反馈
+            with ui.row().classes('w-full items-center'):
+                config_status = '✅ 配置有效' if self.app_state['config_valid'] else '❌ 配置无效'
+                api_status = '✅ API密钥已设置' if self.app_state['api_key_set'] else '❌ API密钥未设置'
+                status_color = 'bg-green-100 text-green-800' if self.app_state['config_valid'] and self.app_state['api_key_set'] else 'bg-red-100 text-red-800'
+                ui.label(f'{config_status} | {api_status}').classes(f'text-sm px-3 py-2 rounded-lg {status_color} font-medium')
+    
     def update_image_config(self, key: str, value: str):
         """更新图片处理配置"""
         if not self.config.has_section('Image'):
@@ -373,6 +403,166 @@ class ImageTranslatorApp:
     def update_normalize_mode(self, enabled: bool):
         """更新归一化坐标模式"""
         self.app_state['normalize_coordinates'] = enabled
+    
+    def auto_fill_output_dir(self, e):
+        """自动填充输出文件夹路径"""
+        input_dir = e.value.strip()
+        # 只有当输出路径为空时才自动填充
+        current_output = self.batch_output_dir.value.strip()
+        if input_dir and not current_output:
+            # 如果输入路径不为空且输出路径为空，则自动填充相同路径
+            self.batch_output_dir.set_value(input_dir)
+    
+    def setup_batch_processing_ui(self):
+        """设置批量处理界面"""
+        # 批量处理区域
+        with ui.card().classes('w-full mb-4 shadow-md border-0 rounded-xl bg-gradient-to-br from-green-50 to-teal-50'):
+            with ui.row().classes('items-center gap-2 mb-3'):
+                ui.icon('folder', color='positive', size='sm')
+                ui.label('批量处理').classes('text-lg font-bold text-gray-800')
+            
+            # 文件夹路径输入
+            with ui.row().classes('w-full items-center mb-3'):
+                ui.label('输入文件夹:').classes('w-24 font-medium text-gray-700')
+                self.batch_input_dir = ui.input(
+                    placeholder='请输入图片文件夹路径...',
+                    value='input',
+                    on_change=self.auto_fill_output_dir
+                ).props('dense outlined').classes('flex-1 bg-gray-50')
+            
+            # 输出文件夹设置
+            with ui.row().classes('w-full items-center mb-4'):
+                ui.label('输出文件夹:').classes('w-24 font-medium text-gray-700')
+                self.batch_output_dir = ui.input(
+                    placeholder='请输入输出文件夹路径...',
+                    value=''
+                ).props('dense outlined').classes('flex-1 bg-gray-50')
+            
+            # 批量处理按钮
+            self.batch_process_btn = ui.button(
+                '开始批量处理',
+                on_click=self.start_batch_processing,
+                icon='play_arrow'
+            ).props('color=positive rounded').classes('w-full hover:shadow-lg transition-all duration-200')
+            
+            # 批量处理进度
+            self.batch_progress = ui.linear_progress(0).props('color=positive').classes('w-full mb-2 h-2 rounded-full')
+            self.batch_progress.visible = False
+            
+            # 批量处理状态
+            self.batch_status = ui.label('准备批量处理...').classes('text-sm p-3 bg-green-50 border border-green-200 rounded-lg text-green-800')
+            
+            # 批量处理统计信息
+            self.batch_stats = ui.label('').classes('text-xs text-gray-600 mt-2')
+    
+    async def start_batch_processing(self):
+        """开始批量处理"""
+        input_dir = self.batch_input_dir.value.strip()
+        output_dir = self.batch_output_dir.value.strip()
+        
+        if not input_dir:
+            ui.notify('请输入输入文件夹路径', type='warning')
+            return
+        
+        if not output_dir:
+            ui.notify('请输入输出文件夹路径', type='warning')
+            return
+        
+        # 检查输入文件夹是否存在
+        input_path = Path(input_dir)
+        if not input_path.exists() or not input_path.is_dir():
+            ui.notify(f'输入文件夹不存在: {input_dir}', type='negative')
+            return
+        
+        # 创建输出文件夹（在输出路径下创建translated子文件夹）
+        output_path = Path(output_dir) / "translated"
+        output_path.mkdir(exist_ok=True, parents=True)
+        
+        # 获取图片文件列表
+        image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif'}
+        image_files = [f for f in input_path.iterdir()
+                      if f.is_file() and f.suffix.lower() in image_extensions]
+        
+        if not image_files:
+            ui.notify(f'在 {input_dir} 中未找到图片文件', type='warning')
+            return
+        
+        try:
+            self.batch_process_btn.disable()
+            self.batch_progress.visible = True
+            self.batch_progress.value = 0
+            self.batch_status.set_text(f'开始批量处理 {len(image_files)} 张图片...')
+            
+            # 处理统计
+            processed_count = 0
+            success_count = 0
+            failed_count = 0
+            
+            for i, image_file in enumerate(image_files):
+                # 更新进度
+                progress = (i / len(image_files)) * 100
+                self.batch_progress.value = progress / 100
+                
+                current_status = f'正在处理: {image_file.name} ({i+1}/{len(image_files)})'
+                self.batch_status.set_text(current_status)
+                
+                try:
+                    # 读取图片
+                    image = Image.open(image_file)
+                    
+                    # 处理图片翻译
+                    result = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        process_image_translation,
+                        image,
+                        self.config_path,
+                        self.app_state['normalize_coordinates']
+                    )
+                    
+                    if result['success'] and result['translated_image']:
+                        # 保存处理结果到translated子文件夹
+                        output_file = output_path / f"{image_file.stem}_translated{image_file.suffix}"
+                        
+                        # 根据图片模式和文件扩展名选择合适的保存格式
+                        image = result['translated_image']
+                        if image.mode == 'RGBA' and output_file.suffix.lower() in ['.jpg', '.jpeg']:
+                            # RGBA图片不能保存为JPEG，转换为RGB模式
+                            image = image.convert('RGB')
+                        
+                        image.save(output_file)
+                        success_count += 1
+                    else:
+                        failed_count += 1
+                        print(f"处理失败: {image_file.name} - {result.get('error', '未知错误')}")
+                    
+                except Exception as e:
+                    failed_count += 1
+                    print(f"处理异常: {image_file.name} - {str(e)}")
+                
+                processed_count += 1
+                
+                # 更新统计信息
+                stats_text = f"进度: {processed_count}/{len(image_files)} | 成功: {success_count} | 失败: {failed_count}"
+                self.batch_stats.set_text(stats_text)
+            
+            # 完成处理
+            self.batch_progress.value = 1.0
+            final_status = f"批量处理完成！成功: {success_count}, 失败: {failed_count}"
+            self.batch_status.set_text(final_status)
+            
+            ui.notify(f'批量处理完成！成功处理 {success_count} 张图片，失败 {failed_count} 张，结果保存在 {output_path}',
+                     type='positive' if failed_count == 0 else 'warning')
+            
+        except Exception as e:
+            error_msg = f'批量处理失败: {str(e)}'
+            self.batch_status.set_text(error_msg)
+            ui.notify(error_msg, type='negative')
+        
+        finally:
+            self.batch_process_btn.enable()
+            # 保持进度条可见一段时间
+            await asyncio.sleep(2)
+            self.batch_progress.visible = False
     
     async def start_translation(self):
         """开始翻译过程"""

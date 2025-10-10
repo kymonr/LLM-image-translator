@@ -2,7 +2,7 @@
 
 [简体中文](./README.md) | [English](./README_en.md)
 
-一个功能强大的本地图像翻译工具，提供**命令行**、**网页界面**和**独立窗口应用**三种使用方式。利用先进的视觉语言模型（VLM）实现对图片内文字的精准识别、翻译和无缝替换。告别传统OCR+翻译的繁琐流程，VLM一步到位，效果更佳。
+一个功能强大的本地图像翻译工具，提供**独立窗口应用**和**命令行批量处理**两种使用方式。利用先进的视觉语言模型（VLM）实现对图片内文字的精准识别、翻译和无缝替换。告别传统OCR+翻译的繁琐流程，VLM一步到位，效果更佳。
 
 | 原图 | 翻译结果 |
 |------|----------|
@@ -16,7 +16,7 @@
 - **📐 归一化坐标**: 支持归一化坐标模式，解决部分API供应商压缩图片分辨率导致坐标不匹配的问题。
 - **⚙️ 高度可配置**: 所有关键参数（API密钥、模型、Prompt、字体、样式等）均可通过 `config.ini` 文件轻松配置，无需修改代码。
 - **🗣️ 清晰日志**: 使用彩色日志输出，清晰展示程序运行的每一个步骤，便于调试和追踪。
-- **🖥️ 三模使用**: 支持命令行批量处理、网页界面单张处理和独立窗口应用三种使用方式。
+- **🖥️ 双模使用**: 支持独立窗口应用单张处理和命令行批量处理两种使用方式。
 - **🎯 现代化界面**: NiceGUI版本提供原生窗口体验，支持实时预览、键盘快捷键和响应式设计。
 - **⚡ 异步处理**: 非阻塞的翻译任务处理，保持界面响应流畅。
 
@@ -45,7 +45,14 @@ pip install -r requirements.txt
 
 ### 2. 进行配置
 
-项目根目录下应该有一个 `config.ini.example` 文件，你可以复制文件为config.ini并进行配置。如果没有，请根据下面的模板创建一个，或者将代码中的 `config_file = 'config.ini'` 改为您自己的配置文件名。
+项目根目录下有一个 `config.ini.example` 文件，你可以复制文件为 `config.ini` 并进行配置：
+
+```bash
+# 复制配置文件模板
+cp config.ini.example config.ini
+```
+
+编辑 `config.ini` 文件，主要配置项：
 
 ```ini
 # config.ini
@@ -104,16 +111,9 @@ python run_nicegui_app.py
 - 实时预览原图和翻译结果，支持标签切换
 - 键盘快捷键支持：Ctrl+T翻译、Ctrl+R重置、Ctrl+S保存
 - 异步处理，保持界面响应流畅
+- 批量处理功能，支持文件夹批量翻译
 
-#### 方式二：网页界面（计划逐步淘汰）
-
-```bash
-python app.py
-```
-
-访问 `http://localhost:7860` 即可使用网页界面。
-
-#### 方式三：命令行批量处理（计划逐步淘汰）
+#### 方式二：命令行批量处理
 
 ```bash
 # 将图片放入 input 文件夹后运行
@@ -126,9 +126,8 @@ python LLMtranslator.py
 
 ```
 LLM-image-translator/
-├── app.py                 # Gradio网页界面
 ├── nicegui_app.py         # NiceGUI主应用文件
-├── run_nicegui_app.py     # NiceGUI启动脚本
+├── run_nicegui_app.py     # NiceGUI启动脚本（推荐使用）
 ├── LLMtranslator.py       # 核心翻译模块
 ├── config.ini.example     # 配置文件模板
 ├── requirements.txt       # 依赖列表
@@ -144,6 +143,7 @@ LLM-image-translator/
 ### API配置（Translator部分）
 
 - `api_key`: 必须设置，支持 SiliconFlow 等兼容 OpenAI API 的服务
+- `api_base`: API服务地址，默认为 SiliconFlow
 - `model_name`: 推荐使用支持视觉任务的模型，如 Qwen-VL 系列
 - `model_prompt`: 可自定义指令，但需保持JSON输出格式要求
 
@@ -163,8 +163,15 @@ LLM-image-translator/
 2. **检查配置**: 确认配置文件路径正确，API密钥已设置
 3. **选择模式**: 根据需要选择是否启用归一化坐标模式
 4. **开始翻译**: 点击"开始翻译"按钮或使用快捷键 Ctrl+T 启动翻译过程
-5. **查看结果**: 在右侧标签页中切换查看原图和翻译结果
+5. **查看结果**: 在右侧对比查看原图和翻译结果
 6. **保存结果**: 点击"保存结果"或使用快捷键 Ctrl+S 将翻译后的图片保存到output文件夹
+
+### 批量处理流程
+
+1. **设置输入文件夹**: 在"批量处理"标签页设置包含图片的文件夹
+2. **设置输出文件夹**: 指定结果保存位置
+3. **开始处理**: 点击"开始批量处理"按钮
+4. **查看进度**: 实时查看处理进度和统计信息
 
 ### 键盘快捷键（NiceGUI版本）
 
@@ -184,25 +191,26 @@ LLM-image-translator/
 2. **字体文件**: 确保 `font/font.ttf` 文件存在，否则使用系统默认字体
 3. **图片格式**: 支持 JPG、PNG、JPEG、BMP、GIF 等常见格式
 4. **网络连接**: 需要稳定的网络连接以调用 VLM API
+5. **配置文件**: 首次使用请复制 `config.ini.example` 为 `config.ini`
 
 ## 🔧 故障排除
 
 ### 常见问题
 
 **Q: 运行时报错 "配置文件无法读取"**
-A: 确保 `config.ini` 文件存在于项目根目录
+A: 确保 `config.ini` 文件存在于项目根目录，或从 `config.ini.example` 复制创建
 
 **Q: 翻译失败，提示API密钥错误**
 A: 检查 `config.ini` 中的 `api_key` 是否已正确设置
 
-**Q: 网页界面无法访问**
-A: 检查 7860 端口是否被占用，或尝试修改 `app.py` 中的端口设置
+**Q: 独立窗口应用无法启动**
+A: 检查依赖是否安装完整，运行 `pip install -r requirements.txt`
 
 **Q: 译文显示异常**
 A: 检查字体文件是否存在，或调整 `config.ini` 中的字体大小相关参数
 
 **Q: 翻译位置不准确**
-A: 启用归一化坐标模式
+A: 请启用归一化坐标模式试试
 
 **Q: 快捷键不生效（NiceGUI版本）**
 A: 确保应用窗口处于激活状态，快捷键仅在应用窗口内有效
@@ -219,16 +227,34 @@ A: 确保应用窗口处于激活状态，快捷键仅在应用窗口内有效
 
 ### 技术栈
 
-- **前端框架**: NiceGUI (基于Vue.js) / Gradio
+- **前端框架**: NiceGUI (基于Vue.js)
 - **后端语言**: Python 3.9+
 - **图片处理**: Pillow (PIL)
 - **API调用**: requests
 - **配置管理**: configparser
-- **样式框架**: Tailwind CSS (通过NiceGUI集成)
+- **异步处理**: asyncio
 
 ### 核心模块
 
-应用基于 `LLMtranslator.py` 模块，通过 `process_image_translation` 函数进行集成。
+应用基于 [`LLMtranslator.py`](LLMtranslator.py) 模块，通过 [`process_image_translation`](LLMtranslator.py:652) 函数进行集成。独立窗口应用使用 [`nicegui_app.py`](nicegui_app.py) 构建现代化界面。
+
+### 扩展开发
+
+核心翻译模块 [`LLMtranslator.py`](LLMtranslator.py) 提供了完整的API接口，可以轻松集成到其他应用中：
+
+```python
+from LLMtranslator import process_image_translation
+from PIL import Image
+
+# 使用图片路径
+result = process_image_translation('path/to/image.jpg')
+if result['success']:
+    result['translated_image'].save('output/translated.jpg')
+
+# 使用PIL图片对象
+img = Image.open('test.jpg')
+result = process_image_translation(img)
+```
 
 ## 更新计划
 
@@ -242,8 +268,8 @@ A: 确保应用窗口处于激活状态，快捷键仅在应用窗口内有效
 ## 🙏 致谢
 
 - **Pillow (PIL Fork)**: 强大的图像处理库
-- **Gradio**: 快速构建机器学习演示界面
 - **NiceGUI**: 现代化的Python GUI框架
+- **SiliconFlow**: 提供稳定的VLM API服务
 - 本项目的设计受到了 [python-image-translator](https://github.com/boysugi20/python-image-translator) 的启发
 
 ---
