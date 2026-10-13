@@ -707,6 +707,7 @@ def process_image_translation(image_input, config_path='config.ini', normalize_c
         'error': None
     }
     
+    temporary_image_path = None
     try:
         # 检查并加载配置文件
         if not os.path.exists(config_path):
@@ -739,6 +740,7 @@ def process_image_translation(image_input, config_path='config.ini', normalize_c
             # 为API调用创建临时文件
             import tempfile
             with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+                temporary_image_path = tmp_file.name
                 original_image.save(tmp_file.name, 'PNG')
                 image_path_for_api = tmp_file.name
         else:
@@ -755,13 +757,6 @@ def process_image_translation(image_input, config_path='config.ini', normalize_c
         
         # 进行OCR识别和翻译
         translated_data = translator.ocr_and_translate(image_path_for_api)
-        
-        # 如果输入是PIL对象，清理临时文件
-        if not isinstance(image_input, str):
-            try:
-                os.unlink(image_path_for_api)
-            except:
-                pass  # 忽略删除临时文件的错误
         
         if not translated_data:
             result['success'] = True
@@ -785,6 +780,12 @@ def process_image_translation(image_input, config_path='config.ini', normalize_c
         result['error'] = str(e)
         result['message'] = "处理过程中发生错误"
         return result
+    finally:
+        if temporary_image_path is not None:
+            try:
+                os.unlink(temporary_image_path)
+            except OSError:
+                pass  # 保留处理结果，忽略自有临时文件的清理错误
 
 if __name__ == "__main__":
     main()
